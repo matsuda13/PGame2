@@ -16,7 +16,7 @@ public class MainMenu extends JPanel {
     /** 操作ボタンの色。 */
     private static final Color BLUE = new Color(69, 126, 163);
     /** 現在のゲーム状態。 */
-    private GameSession session = new GameSession();
+    private GameSession session;
     /** 日付表示。 */
     private final JLabel day = label("", 27);
     /** 所持プルン表示。 */
@@ -33,19 +33,30 @@ public class MainMenu extends JPanel {
     private final JTextArea log = new JTextArea();
     /** 実行条件に合わせて更新するボタン。 */
     private final EnumMap<Action, JButton> buttons = new EnumMap<>(Action.class);
+    /** 補正済み行動の説明欄。 */
+    private final EnumMap<Action, JLabel> effectLabels = new EnumMap<>(Action.class);
+    /** 小目標とイベントの状態欄。 */
+    private final JLabel progress = label("", 14);
     /** 任意の日終了ボタン。 */
     private final JButton endDay = button("一日を終了する");
     /** ゲームオーバー時の再開始ボタン。 */
     private final JButton restart = button("最初からやり直す");
     /** 一日開始時の体力。 */
-    private int startHp = session.getHp();
+    private int startHp;
     /** 一日開始時の所持金。 */
-    private int startPlun = session.getPlun();
+    private int startPlun;
     /** 一日開始時の能力。 */
-    private int startAbility = session.getAbility();
+    private int startAbility;
 
     /** サンプルの三列構成をリサイズ可能なレイアウトで組み立てる。 */
-    public MainMenu() {
+    public MainMenu() { this(new GameSession()); }
+
+    /** 指定セッションの状態から画面を作る。 */
+    public MainMenu(GameSession session) {
+        this.session = session;
+        startHp = session.getHp();
+        startPlun = session.getPlun();
+        startAbility = session.getAbility();
         setLayout(new BorderLayout(18, 18));
         setBackground(new Color(73, 63, 54));
         setBorder(new EmptyBorder(22, 22, 22, 22));
@@ -57,6 +68,8 @@ public class MainMenu extends JPanel {
         message.setBorder(new EmptyBorder(16, 18, 12, 18));
         scene.add(message, BorderLayout.NORTH);
         scene.add(new PlunPicture(), BorderLayout.CENTER);
+        progress.setBorder(new EmptyBorder(8, 18, 8, 18));
+        scene.add(progress, BorderLayout.SOUTH);
         center.add(scene, BorderLayout.CENTER);
         JPanel actions = new JPanel(new GridLayout(1, 4, 10, 0));
         actions.setOpaque(false);
@@ -64,6 +77,7 @@ public class MainMenu extends JPanel {
         center.add(actions, BorderLayout.SOUTH);
         add(center, BorderLayout.CENTER);
         add(createLog(), BorderLayout.EAST);
+        showNotices();
         refresh();
     }
 
@@ -90,11 +104,9 @@ public class MainMenu extends JPanel {
         JLabel title = label(action.title, 22);
         title.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(title, BorderLayout.NORTH);
-        String effects = "<html><body style='width:100px'>" + action.description
-                + "<br><br>時間 −" + action.hours + " 時間<br>HP " + signed(action.hp)
-                + (action.plun == 0 ? "" : "<br>プルン " + signed(action.plun))
-                + (action.ability == 0 ? "" : "<br>基礎能力 " + signed(action.ability)) + "</body></html>";
-        panel.add(label(effects, 15), BorderLayout.CENTER);
+        JLabel effects = label("", 15);
+        effectLabels.put(action, effects);
+        panel.add(effects, BorderLayout.CENTER);
         JButton execute = button("実行する");
         execute.addActionListener(event -> execute(action));
         buttons.put(action, execute);
@@ -131,11 +143,14 @@ public class MainMenu extends JPanel {
     /** 実際の増減を記録し、死亡・日終了を順に判定する。 */
     private void execute(Action action) {
         int oldHp = session.getHp();
-        int time = 8 + GameSession.DAILY_HOURS - session.getHours();
+        int time = 8 + session.getDailyHours() - session.getHours();
+        GameSession.Effects effect = session.effects(action);
         session.execute(action);
         append(String.format("%02d:00  %s\nHP %s / プルン %s / 基礎能力 %s\n",
-                time, action.title, signed(session.getHp() - oldHp), signed(action.plun), signed(action.ability)));
+                time, action.title, signed(session.getHp() - oldHp), signed(effect.plun()), signed(effect.ability())));
+        if (!session.getBattleMessage().isEmpty()) append(session.getBattleMessage());
         message.setText(action.title + "が終わった！");
+        showNotices();
         refresh();
         if (session.isGameOver()) {
             message.setText("HPが0になりました。ゲームオーバー。");
@@ -155,6 +170,7 @@ public class MainMenu extends JPanel {
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"翌日へ"}, "翌日へ");
         append(summary + "\n");
         session.nextDay();
+        showNotices();
         startHp = session.getHp();
         startPlun = session.getPlun();
         startAbility = session.getAbility();
@@ -171,6 +187,7 @@ public class MainMenu extends JPanel {
         startAbility = session.getAbility();
         log.setText("Day 1 — 一日の始まり\n");
         message.setText("今日はどうしようかな…");
+        showNotices();
         refresh();
     }
 
@@ -179,17 +196,32 @@ public class MainMenu extends JPanel {
         day.setText("Day " + session.getDay());
         hp.setValue(session.getHp());
         hp.setString(session.getHp() + " / " + GameSession.MAX_HP);
+        hours.setMaximum(session.getDailyHours());
         hours.setValue(session.getHours());
-        hours.setString(session.getHours() + " / " + GameSession.DAILY_HOURS);
+        hours.setString(session.getHours() + " / " + session.getDailyHours());
         plun.setText("プルン   " + session.getPlun());
         ability.setText("基礎能力   " + session.getAbility());
+        progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
+            GameSession.Effects effect = session.effects(action);
+            effectLabels.get(action).setText("<html><body style='width:100px'>" + action.description
+                    + "<br><br>時間 −" + effect.hours() + " 時間<br>HP " + signed(effect.hp())
+                    + (effect.plun() == 0 ? "" : "<br>プルン " + signed(effect.plun()))
+                    + (effect.ability() == 0 ? "" : "<br>基礎能力 " + signed(effect.ability())) + "</body></html>");
             String reason = session.unavailableReason(action);
             button.setEnabled(reason.isEmpty());
             button.setToolTipText(reason.isEmpty() ? action.description : reason);
         });
         endDay.setEnabled(!session.isGameOver());
         restart.setVisible(session.isGameOver());
+    }
+
+    /** 次の操作を受け付ける前に達成や予告を通知する。 */
+    private void showNotices() {
+        for (String notice : session.drainNotices()) {
+            append(notice);
+            if (isShowing()) JOptionPane.showMessageDialog(this, notice, "お知らせ", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     /** 直近のログが見えるよう追記する。 */

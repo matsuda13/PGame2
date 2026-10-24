@@ -13,7 +13,7 @@ class MainMenuTest {
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            MainMenu menu = new MainMenu();
+            MainMenu menu = new MainMenu(new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }));
             List<JButton> actions = new ArrayList<>();
             collect(menu, JButton.class).stream()
                     .filter(button -> button.getText().equals("実行する")).forEach(actions::add);
