@@ -7,7 +7,7 @@ import static pgame2.gameflow.GameSession.Action.*;
 class GameSessionTest {
     @Test
     void actionsConsumeResourcesAndHealingRespectsCap() {
-        GameSession game = new GameSession();
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
         assertThrows(IllegalStateException.class, () -> game.execute(HEAL));
         assertEquals(12, game.getHours());
         game.execute(WORK);
@@ -29,7 +29,7 @@ class GameSessionTest {
 
     @Test
     void noAffordableActionEndsDayAndResourcesCarryOver() {
-        GameSession game = new GameSession();
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
         game.execute(TRAIN);
         game.execute(TRAIN);
         game.execute(TRAIN);
@@ -45,7 +45,7 @@ class GameSessionTest {
 
     @Test
     void timeShortageBlocksLongActionsButAllowsMagic() {
-        GameSession game = new GameSession();
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
         game.execute(WORK);
         game.execute(WORK);
         game.execute(REST);
@@ -57,7 +57,7 @@ class GameSessionTest {
 
     @Test
     void deathTakesPriorityOverDayTransition() {
-        GameSession game = new GameSession();
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
         game.execute(WORK);
         game.execute(WORK);
         game.execute(WORK);
