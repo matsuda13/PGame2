@@ -11,19 +11,19 @@ public final class Train {
     private final int hpCost;
     /** 報酬プルン。 */
     private final int plunReward;
-    /** 獲得する基礎能力値。 */
-    private final int abilityGain;
+    /** 獲得する労働効率値。 */
+    private final int workEfficiencyGain;
 
     /** 鍛錬一種類分の消費と報酬を定義する。 */
-    public Train(int hours, int hpCost, int plunReward, int abilityGain) {
+    public Train(int hours, int hpCost, int plunReward, int workEfficiencyGain) {
         this.hours = hours;
         this.hpCost = hpCost;
         this.plunReward = plunReward;
-        this.abilityGain = abilityGain;
+        this.workEfficiencyGain = workEfficiencyGain;
     }
 
     public int getHours() { return hours; }
     public int getHpCost() { return hpCost; }
     public int getPlunReward() { return plunReward; }
-    public int getAbilityGain() { return abilityGain; }
+    public int getWorkEfficiencyGain() { return workEfficiencyGain; }
 }

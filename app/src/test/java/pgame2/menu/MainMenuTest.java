@@ -9,6 +9,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MainMenuTest {
+    /** 鍛錬後に労働報酬の表示と獲得額がともに更新される。 */
+    @Test
+    void trainingUpdatesWorkRewardPreviewAndIncome() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = new pgame2.gameflow.GameSession(new java.util.Random(0));
+            MainMenu menu = new MainMenu(game);
+            List<JButton> actions = collect(menu, JButton.class).stream()
+                    .filter(button -> button.getText().equals("実行する")).toList();
+            actions.get(3).doClick();
+            assertEquals(1, game.getWorkEfficiency());
+            assertTrue(collect(menu, JLabel.class).stream()
+                    .anyMatch(label -> label.getText().contains("プルン +33")));
+            actions.get(0).doClick();
+            assertEquals(33, game.getPlun());
+            assertTrue(collect(menu, JTextArea.class).getFirst().getText().contains("プルン +33"));
+        });
+    }
+
     @Test
     void fractionalEffectsAreAppliedBeforeRoundingAndLoggedAsActualChanges() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
@@ -26,9 +44,9 @@ class MainMenuTest {
             assertEquals(80, game.getHp());
             assertEquals(8, game.getHours());
             assertEquals(2, game.getPlun());
-            assertEquals(1, game.getAbility());
+            assertEquals(1, game.getWorkEfficiency());
             assertTrue(collect(menu, JTextArea.class).getFirst().getText()
-                    .contains("HP -20 / プルン +2 / 基礎能力 +1"));
+                    .contains("HP -20 / プルン +2 / 労働効率 +1"));
         });
     }
 

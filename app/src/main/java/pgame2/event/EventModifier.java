@@ -15,7 +15,7 @@ public record EventModifier(Target target, Modifier modifier) {
     /** 現在のイベントで使用する補正対象。 */
     public enum Target {
         WORK_HP_COST("労働のHP消費"), WORK_PLUN_REWARD("労働の報酬プルン"),
-        TRAIN_HP_COST("鍛錬のHP消費"), TRAIN_ABILITY_GAIN("鍛錬の獲得能力値"),
+        TRAIN_HP_COST("鍛錬のHP消費"), TRAIN_WORK_EFFICIENCY_GAIN("鍛錬の獲得労働効率"),
         REST_HOURS_COST("休息の消費時間"), DAILY_HOURS("1日の使用可能時間"),
         BATTLE_CHANCE("戦闘発生確率");
 

@@ -27,8 +27,8 @@ public class GameSession {
     private int hp = MAX_HP;
     /** 所持プルン。 */
     private int plun;
-    /** 蓄積した基礎能力。 */
-    private int ability;
+    /** 蓄積した労働効率。 */
+    private int workEfficiency;
 
     /** 襲撃の抽選元。 */
     private final RandomGenerator random;
@@ -54,21 +54,23 @@ public class GameSession {
     }
 
     /** 補正済みのコマンド効果。 */
-    public record Effects(BigDecimal hours, BigDecimal hp, BigDecimal plun, BigDecimal ability) { }
+    public record Effects(BigDecimal hours, BigDecimal hp, BigDecimal plun, BigDecimal workEfficiency) { }
 
-    /** 基本値からイベント効果を計算し、終了後に補正を残さない。 */
+    /** 基本値に労働効率とイベントの補正を合算し、端数を保持する。 */
     public Effects effects(Action action) {
         BigDecimal hpChange = BigDecimal.valueOf(action.hp);
         BigDecimal income = BigDecimal.valueOf(action.plun);
-        BigDecimal growth = BigDecimal.valueOf(action.ability);
+        BigDecimal growth = BigDecimal.valueOf(action.workEfficiency);
         BigDecimal duration = BigDecimal.valueOf(action.hours);
         if (action == Action.WORK) {
             hpChange = events.apply(WORK_HP_COST, -action.hp).negate();
-            income = events.apply(WORK_PLUN_REWARD, action.plun);
+            income = events.apply(WORK_PLUN_REWARD, action.plun,
+                    new Modifier(Modifier.Type.PERCENT, BigDecimal.valueOf(workEfficiency)
+                            .multiply(BigDecimal.valueOf(Work.EFFICIENCY_REWARD_PERCENT))));
         }
         if (action == Action.TRAIN) {
             hpChange = events.apply(TRAIN_HP_COST, -action.hp).negate();
-            growth = events.apply(TRAIN_ABILITY_GAIN, action.ability);
+            growth = events.apply(TRAIN_WORK_EFFICIENCY_GAIN, action.workEfficiency);
         }
         if (action == Action.REST) duration = events.apply(REST_HOURS_COST, action.hours);
         return new Effects(duration, hpChange, income, growth);
@@ -77,11 +79,11 @@ public class GameSession {
     /** コマンドを識別し、各機能の基本設定を共通の増減値として公開する。 */
     public enum Action {
         WORK("労働", "体を使ってプルンを稼ぐ", Work.DEFAULT.getHours(),
-                -Work.DEFAULT.getHpCost(), Work.DEFAULT.getPlunReward(), Work.DEFAULT.getAbilityGain()),
+                -Work.DEFAULT.getHpCost(), Work.DEFAULT.getPlunReward(), Work.DEFAULT.getWorkEfficiencyGain()),
         REST("休息", "ゆっくり休んで体力を回復", 3, 25, 0, 0),
         HEAL("回復魔法", "プルンを使って体力を大きく回復", 1, 40, -15, 0),
-        TRAIN("鍛錬", "体に負荷をかけて基礎能力を高める", Train.DEFAULT.getHours(),
-                -Train.DEFAULT.getHpCost(), Train.DEFAULT.getPlunReward(), Train.DEFAULT.getAbilityGain());
+        TRAIN("鍛錬", "体に負荷をかけて労働効率を高める", Train.DEFAULT.getHours(),
+                -Train.DEFAULT.getHpCost(), Train.DEFAULT.getPlunReward(), Train.DEFAULT.getWorkEfficiencyGain());
         /** 表示する行動名。 */
         public final String title;
         /** 行動の目的。 */
@@ -92,16 +94,16 @@ public class GameSession {
         public final int hp;
         /** プルンの増減。 */
         public final int plun;
-        /** 能力の増減。 */
-        public final int ability;
+        /** 労働効率の増減。 */
+        public final int workEfficiency;
 
-        Action(String title, String description, int hours, int hp, int plun, int ability) {
+        Action(String title, String description, int hours, int hp, int plun, int workEfficiency) {
             this.title = title;
             this.description = description;
             this.hours = hours;
             this.hp = hp;
             this.plun = plun;
-            this.ability = ability;
+            this.workEfficiency = workEfficiency;
         }
     }
 
@@ -122,7 +124,7 @@ public class GameSession {
         changeHours(effect.hours().negate());
         changeHp(effect.hp());
         changePlun(effect.plun());
-        changeAbility(effect.ability());
+        changeWorkEfficiency(effect.workEfficiency());
         battleMessage = "";
         if (isGameOver()) return;
         if (action == Action.WORK && battle.occurs(random, events.apply(BATTLE_CHANCE, SimpleBattle.BASE_CHANCE))) {
@@ -183,8 +185,8 @@ public class GameSession {
     /** 所持プルンの最終値を切り捨てる。 */
     public void changePlun(BigDecimal delta) { plun = Modifier.floor(BigDecimal.valueOf(plun).add(delta)); }
 
-    /** 基礎能力の最終値を切り捨てる。 */
-    public void changeAbility(BigDecimal delta) { ability = Modifier.floor(BigDecimal.valueOf(ability).add(delta)); }
+    /** 労働効率の最終値を切り捨てる。 */
+    public void changeWorkEfficiency(BigDecimal delta) { workEfficiency = Modifier.floor(BigDecimal.valueOf(workEfficiency).add(delta)); }
 
     /** 残り時間の最終値を切り捨てる。 */
     public void changeHours(BigDecimal delta) { hours = Modifier.floor(BigDecimal.valueOf(hours).add(delta)); }
@@ -204,6 +206,6 @@ public class GameSession {
     public int getHours() { return hours; }
     public int getHp() { return hp; }
     public int getPlun() { return plun; }
-    public int getAbility() { return ability; }
+    public int getWorkEfficiency() { return workEfficiency; }
     public boolean isGameOver() { return hp <= 0; }
 }

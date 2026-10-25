@@ -1,6 +1,7 @@
 package pgame2.event;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
@@ -26,7 +27,7 @@ public class SituationEvents {
         BEASTS("魔獣活発化", "", modifier(BATTLE_CHANCE, points(30))),
         BOOM("好景気", "", modifier(WORK_PLUN_REWARD, percent(20))),
         PROTEIN("プロテインの雨", "", modifier(TRAIN_HP_COST, percent(100)),
-                modifier(TRAIN_ABILITY_GAIN, percent(100))),
+                modifier(TRAIN_WORK_EFFICIENCY_GAIN, percent(100))),
         SLEEP("春眠暁を覚えず", "毎朝体力全快", modifier(DAILY_HOURS, fixed(-1)),
                 modifier(REST_HOURS_COST, fixed(2)));
         /** 表示名。 */
@@ -44,9 +45,11 @@ public class SituationEvents {
         }
 
         /** 指定対象の補正を合算し、端数を保持した結果を返す。 */
-        public BigDecimal apply(EventModifier.Target target, int base) {
-            return Modifier.apply(BigDecimal.valueOf(base), modifiers.stream()
-                    .filter(m -> m.target() == target).map(EventModifier::modifier).toList());
+        public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
+            List<Modifier> combined = new ArrayList<>(Arrays.asList(additional));
+            modifiers.stream().filter(m -> m.target() == target)
+                    .map(EventModifier::modifier).forEach(combined::add);
+            return Modifier.apply(BigDecimal.valueOf(base), combined);
         }
     }
     /** 抽選元。 */
@@ -90,9 +93,10 @@ public class SituationEvents {
     public Kind getActive() { return active; }
     public Kind getUpcoming() { return upcoming; }
 
-    /** 開催中の補正を適用し、イベントがなければ基本値を返す。 */
-    public BigDecimal apply(EventModifier.Target target, int base) {
-        return active == null ? BigDecimal.valueOf(base) : active.apply(target, base);
+    /** 開催中の補正と追加補正を合算し、計算途中の端数を保持する。 */
+    public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
+        return active == null ? Modifier.apply(BigDecimal.valueOf(base), Arrays.asList(additional))
+                : active.apply(target, base, additional);
     }
 
     /** 開催と予告を同時に表示する。 */

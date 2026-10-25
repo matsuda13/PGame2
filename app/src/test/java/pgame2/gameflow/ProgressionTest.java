@@ -71,10 +71,10 @@ class ProgressionTest {
                 assertEquals(0, java.math.BigDecimal.valueOf(-26).compareTo(game.effects(WORK).hp()));
                 assertEquals(0, java.math.BigDecimal.valueOf(-15).compareTo(game.effects(TRAIN).hp()));
             }
-            if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(36).compareTo(game.effects(WORK).plun()));
+            if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(39).compareTo(game.effects(WORK).plun()));
             if (kind == 3) {
                 assertEquals(0, java.math.BigDecimal.valueOf(-30).compareTo(game.effects(TRAIN).hp()));
-                assertEquals(0, java.math.BigDecimal.valueOf(2).compareTo(game.effects(TRAIN).ability()));
+                assertEquals(0, java.math.BigDecimal.valueOf(2).compareTo(game.effects(TRAIN).workEfficiency()));
             }
             if (kind == 4) {
                 assertEquals(100, game.getHp());
@@ -91,8 +91,8 @@ class ProgressionTest {
             assertEquals(12, game.getDailyHours());
             assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(REST).hours()));
             assertEquals(0, java.math.BigDecimal.valueOf(-20).compareTo(game.effects(WORK).hp()));
-            assertEquals(0, java.math.BigDecimal.valueOf(30).compareTo(game.effects(WORK).plun()));
-            assertEquals(0, java.math.BigDecimal.valueOf(1).compareTo(game.effects(TRAIN).ability()));
+            assertEquals(0, java.math.BigDecimal.valueOf(kind == 4 ? 39 : 33).compareTo(game.effects(WORK).plun()));
+            assertEquals(0, java.math.BigDecimal.valueOf(1).compareTo(game.effects(TRAIN).workEfficiency()));
         }
     }
 
@@ -140,7 +140,7 @@ class ProgressionTest {
             game.execute(REST);
             game.nextDay();
         }
-        assertEquals(10, game.getAbility());
+        assertEquals(10, game.getWorkEfficiency());
         assertEquals(60, game.getPlun());
         assertEquals(1, game.drainNotices().stream().filter(n -> n.contains("小目標達成")).count());
         assertTrue(game.drainNotices().isEmpty());

@@ -24,8 +24,8 @@ public class MainMenu extends JPanel {
     private final JLabel day = label("", 27);
     /** 所持プルン表示。 */
     private final JLabel plun = label("", 21);
-    /** 基礎能力表示。 */
-    private final JLabel ability = label("", 21);
+    /** 労働効率表示。 */
+    private final JLabel workEfficiency = label("", 21);
     /** 体力表示。 */
     private final JProgressBar hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
     /** 残り時間表示。 */
@@ -48,8 +48,8 @@ public class MainMenu extends JPanel {
     private int startHp;
     /** 一日開始時の所持金。 */
     private int startPlun;
-    /** 一日開始時の能力。 */
-    private int startAbility;
+    /** 一日開始時の労働効率。 */
+    private int startWorkEfficiency;
 
     /** サンプルの三列構成をリサイズ可能なレイアウトで組み立てる。 */
     public MainMenu() { this(new GameSession()); }
@@ -59,7 +59,7 @@ public class MainMenu extends JPanel {
         this.session = session;
         startHp = session.getHp();
         startPlun = session.getPlun();
-        startAbility = session.getAbility();
+        startWorkEfficiency = session.getWorkEfficiency();
         setLayout(new BorderLayout(18, 18));
         setBackground(new Color(73, 63, 54));
         setBorder(new EmptyBorder(22, 22, 22, 22));
@@ -90,7 +90,7 @@ public class MainMenu extends JPanel {
         panel.setPreferredSize(new Dimension(205, 0));
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         for (JComponent item : new JComponent[] {day, label("晴れ（試作表示）", 15),
-                label("HP", 18), hp, label("残り時間", 18), hours, plun, ability}) {
+                label("HP", 18), hp, label("残り時間", 18), hours, plun, workEfficiency}) {
             item.setAlignmentX(Component.LEFT_ALIGNMENT);
             panel.add(item);
             panel.add(Box.createVerticalStrut(22));
@@ -149,10 +149,10 @@ public class MainMenu extends JPanel {
         int time = 8 + session.getDailyHours() - session.getHours();
         GameSession.Effects effect = session.effects(action);
         int plunChange = Modifier.floor(BigDecimal.valueOf(session.getPlun()).add(effect.plun())) - session.getPlun();
-        int abilityChange = Modifier.floor(BigDecimal.valueOf(session.getAbility()).add(effect.ability())) - session.getAbility();
+        int workEfficiencyChange = Modifier.floor(BigDecimal.valueOf(session.getWorkEfficiency()).add(effect.workEfficiency())) - session.getWorkEfficiency();
         session.execute(action);
-        append(String.format("%02d:00  %s\nHP %s / プルン %s / 基礎能力 %s\n",
-                time, action.title, signed(session.getHp() - oldHp), signed(plunChange), signed(abilityChange)));
+        append(String.format("%02d:00  %s\nHP %s / プルン %s / 労働効率 %s\n",
+                time, action.title, signed(session.getHp() - oldHp), signed(plunChange), signed(workEfficiencyChange)));
         if (!session.getBattleMessage().isEmpty()) append(session.getBattleMessage());
         message.setText(action.title + "が終わった！");
         showNotices();
@@ -170,7 +170,7 @@ public class MainMenu extends JPanel {
         String summary = "Day " + session.getDay() + " が終わりました\n\n"
                 + "HP " + startHp + " → " + session.getHp() + "\n"
                 + "プルン " + startPlun + " → " + session.getPlun() + "\n"
-                + "基礎能力 " + startAbility + " → " + session.getAbility();
+                + "労働効率 " + startWorkEfficiency + " → " + session.getWorkEfficiency();
         JOptionPane.showOptionDialog(this, summary, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"翌日へ"}, "翌日へ");
         append(summary + "\n");
@@ -178,7 +178,7 @@ public class MainMenu extends JPanel {
         showNotices();
         startHp = session.getHp();
         startPlun = session.getPlun();
-        startAbility = session.getAbility();
+        startWorkEfficiency = session.getWorkEfficiency();
         append("Day " + session.getDay() + " — 一日の始まり\n");
         message.setText("新しい一日が始まりました。");
         refresh();
@@ -189,7 +189,7 @@ public class MainMenu extends JPanel {
         session = new GameSession();
         startHp = session.getHp();
         startPlun = session.getPlun();
-        startAbility = session.getAbility();
+        startWorkEfficiency = session.getWorkEfficiency();
         log.setText("Day 1 — 一日の始まり\n");
         message.setText("今日はどうしようかな…");
         showNotices();
@@ -205,14 +205,14 @@ public class MainMenu extends JPanel {
         hours.setValue(session.getHours());
         hours.setString(session.getHours() + " / " + session.getDailyHours());
         plun.setText("プルン   " + session.getPlun());
-        ability.setText("基礎能力   " + session.getAbility());
+        workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
             GameSession.Effects effect = session.effects(action);
             effectLabels.get(action).setText("<html><body style='width:100px'>" + action.description
                     + "<br><br>時間 −" + effect.hours().stripTrailingZeros().toPlainString() + " 時間<br>HP " + signed(effect.hp())
                     + (effect.plun().signum() == 0 ? "" : "<br>プルン " + signed(effect.plun()))
-                    + (effect.ability().signum() == 0 ? "" : "<br>基礎能力 " + signed(effect.ability())) + "</body></html>");
+                    + (effect.workEfficiency().signum() == 0 ? "" : "<br>労働効率 " + signed(effect.workEfficiency())) + "</body></html>");
             String reason = session.unavailableReason(action);
             button.setEnabled(reason.isEmpty());
             button.setToolTipText(reason.isEmpty() ? action.description : reason);
