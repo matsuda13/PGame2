@@ -1,6 +1,14 @@
 package pgame2.event;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
+import pgame2.common.Modifier;
+import static pgame2.common.Modifier.*;
+import static pgame2.event.EventModifier.modifier;
+import static pgame2.event.EventModifier.Target.*;
 import java.util.random.RandomGenerator;
 
 /** 予告済みイベントと開催期間を管理する。 */
@@ -15,16 +23,34 @@ public class SituationEvents {
     public static final int NOTICE_DAYS = 8;
     /** 状況変化の種類。 */
     public enum Kind {
-        HEAT("酷暑", "労働の体力消費 +30%"),
-        BEASTS("魔獣活発化", "戦闘発生確率 +30pt"),
-        BOOM("好景気", "労働賃金 +20%"),
-        PROTEIN("プロテインの雨", "鍛錬の能力上昇・体力消費 +100%"),
-        SLEEP("春眠暁を覚えず", "使用可能時間 -1時間・休息 +2時間・毎朝体力全快");
+        HEAT("酷暑", "", modifier(WORK_HP_COST, percent(30))),
+        BEASTS("魔獣活発化", "", modifier(BATTLE_CHANCE, points(30))),
+        BOOM("好景気", "", modifier(WORK_PLUN_REWARD, percent(20))),
+        PROTEIN("プロテインの雨", "", modifier(TRAIN_HP_COST, percent(100)),
+                modifier(TRAIN_WORK_EFFICIENCY_GAIN, percent(100))),
+        SLEEP("春眠暁を覚えず", "毎朝体力全快", modifier(DAILY_HOURS, fixed(-1)),
+                modifier(REST_HOURS_COST, fixed(2)));
         /** 表示名。 */
         public final String title;
         /** 効果説明。 */
         public final String effect;
-        Kind(String title, String effect) { this.title = title; this.effect = effect; }
+        /** 計算と説明文の共通定義。 */
+        private final List<EventModifier> modifiers;
+
+        Kind(String title, String specialEffect, EventModifier... modifiers) {
+            this.title = title;
+            this.modifiers = List.of(modifiers);
+            String numeric = this.modifiers.stream().map(EventModifier::describe).collect(Collectors.joining("・"));
+            this.effect = numeric + (specialEffect.isEmpty() ? "" : "・" + specialEffect);
+        }
+
+        /** 指定対象の補正を合算し、端数を保持した結果を返す。 */
+        public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
+            List<Modifier> combined = new ArrayList<>(Arrays.asList(additional));
+            modifiers.stream().filter(m -> m.target() == target)
+                    .map(EventModifier::modifier).forEach(combined::add);
+            return Modifier.apply(BigDecimal.valueOf(base), combined);
+        }
     }
     /** 抽選元。 */
     private final RandomGenerator random;
@@ -66,6 +92,12 @@ public class SituationEvents {
 
     public Kind getActive() { return active; }
     public Kind getUpcoming() { return upcoming; }
+
+    /** 開催中の補正と追加補正を合算し、計算途中の端数を保持する。 */
+    public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
+        return active == null ? Modifier.apply(BigDecimal.valueOf(base), Arrays.asList(additional))
+                : active.apply(target, base, additional);
+    }
 
     /** 開催と予告を同時に表示する。 */
     public String describe() {
