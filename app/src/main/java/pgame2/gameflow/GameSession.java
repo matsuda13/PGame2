@@ -7,6 +7,8 @@ import pgame2.battle.SimpleBattle;
 import pgame2.event.SituationEvents;
 import pgame2.event.SituationEvents.Kind;
 import pgame2.objective.SmallObjectives;
+import pgame2.train.Train;
+import pgame2.work.Work;
 
 /** 数値はメニュー画像を参考にした調整前の試作用設定。 */
 public class GameSession {
@@ -65,12 +67,14 @@ public class GameSession {
         return new Effects(duration, hpChange, income, growth);
     }
 
-    /** 行動の試作設定を一か所で管理する。 */
+    /** コマンドを識別し、各機能の基本設定を共通の増減値として公開する。 */
     public enum Action {
-        WORK("労働", "体を使ってプルンを稼ぐ", 4, -20, 30, 0),
+        WORK("労働", "体を使ってプルンを稼ぐ", Work.DEFAULT.getHours(),
+                -Work.DEFAULT.getHpCost(), Work.DEFAULT.getPlunReward(), Work.DEFAULT.getAbilityGain()),
         REST("休息", "ゆっくり休んで体力を回復", 3, 25, 0, 0),
         HEAL("回復魔法", "プルンを使って体力を大きく回復", 1, 40, -15, 0),
-        TRAIN("鍛錬", "体に負荷をかけて基礎能力を高める", 3, -15, 0, 1);
+        TRAIN("鍛錬", "体に負荷をかけて基礎能力を高める", Train.DEFAULT.getHours(),
+                -Train.DEFAULT.getHpCost(), Train.DEFAULT.getPlunReward(), Train.DEFAULT.getAbilityGain());
         /** 表示する行動名。 */
         public final String title;
         /** 行動の目的。 */
