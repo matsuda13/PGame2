@@ -172,11 +172,13 @@ public class GameSession {
         payLivingCost();        
     }
 
+    /** 生活費を支払う。払えない場合は残りの全plunを失い、hp-50（暫定） */
     private void payLivingCost(){
         if(plun - LIVING_COST >= 0){
             changePlun(BigDecimal.valueOf(-LIVING_COST));
         } else {
             changePlun(BigDecimal.valueOf(-plun));
+            changeHp(BigDecimal.valueOf(-50));
         }
     }
 
