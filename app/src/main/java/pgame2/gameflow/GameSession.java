@@ -19,6 +19,9 @@ public class GameSession {
     public static final int MAX_HP = 100;
     /** 一日に使用できる時間。 */
     public static final int DAILY_HOURS = 12;
+    /** 生活費 */
+    public static final int LIVING_COST = 50;
+
     /** 現在の日数。 */
     private int day = 1;
     /** 残り時間。 */
@@ -48,6 +51,7 @@ public class GameSession {
     /** 抽選元を注入して再現可能な進行を作る。 */
     public GameSession(RandomGenerator random) {
         this.random = random;
+        plun = 100;
         events = new SituationEvents(random);
         objectives = new SmallObjectives(random);
         beginDay();
@@ -148,7 +152,7 @@ public class GameSession {
     /** 当日の期限判定後、翌日の状況と日次効果を適用する。 */
     public void nextDay() {
         if (isGameOver()) throw new IllegalStateException("ゲームオーバー後は翌日に進めません");
-        evaluateObjective(true);
+        finishDay();
         day++;
         beginDay();
     }
@@ -160,6 +164,20 @@ public class GameSession {
         resetDailyHours();
         if (events.getActive() == Kind.SLEEP) restoreHpToMax();
         if (objectives.startDay(day, plun)) notices.add("小目標予告\n" + objectives.describe(plun));
+    }
+
+    /** 一日の終了直前の処理がある場合ここで行う */
+    private void finishDay(){
+        evaluateObjective(true);
+        payLivingCost();        
+    }
+
+    private void payLivingCost(){
+        if(plun - LIVING_COST >= 0){
+            changePlun(BigDecimal.valueOf(-LIVING_COST));
+        } else {
+            changePlun(BigDecimal.valueOf(-plun));
+        }
     }
 
     /** 達成報酬を一度だけ付与し、操作前の通知へ送る。 */

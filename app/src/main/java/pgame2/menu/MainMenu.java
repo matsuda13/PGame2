@@ -174,6 +174,11 @@ public class MainMenu extends JPanel {
         JOptionPane.showOptionDialog(this, summary, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"翌日へ"}, "翌日へ");
         append(summary + "\n");
+        String summaryPayLivingCost = "Day " + session.getDay() + " の生活費を払いました。\n\n"
+                + GameSession.LIVING_COST + "プルン失いました。";
+        JOptionPane.showOptionDialog(this, summaryPayLivingCost, "一日の終了", JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE, null, new String[] {"OK"}, "OK");
+        append(summaryPayLivingCost + "\n");
         session.nextDay();
         showNotices();
         startHp = session.getHp();
