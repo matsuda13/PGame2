@@ -1,5 +1,8 @@
 package pgame2.menu;
 
+import java.math.BigDecimal;
+import pgame2.common.Modifier;
+
 import java.awt.*;
 import java.util.EnumMap;
 import javax.swing.*;
@@ -145,9 +148,11 @@ public class MainMenu extends JPanel {
         int oldHp = session.getHp();
         int time = 8 + session.getDailyHours() - session.getHours();
         GameSession.Effects effect = session.effects(action);
+        int plunChange = Modifier.floor(BigDecimal.valueOf(session.getPlun()).add(effect.plun())) - session.getPlun();
+        int abilityChange = Modifier.floor(BigDecimal.valueOf(session.getAbility()).add(effect.ability())) - session.getAbility();
         session.execute(action);
         append(String.format("%02d:00  %s\nHP %s / プルン %s / 基礎能力 %s\n",
-                time, action.title, signed(session.getHp() - oldHp), signed(effect.plun()), signed(effect.ability())));
+                time, action.title, signed(session.getHp() - oldHp), signed(plunChange), signed(abilityChange)));
         if (!session.getBattleMessage().isEmpty()) append(session.getBattleMessage());
         message.setText(action.title + "が終わった！");
         showNotices();
@@ -205,9 +210,9 @@ public class MainMenu extends JPanel {
         buttons.forEach((action, button) -> {
             GameSession.Effects effect = session.effects(action);
             effectLabels.get(action).setText("<html><body style='width:100px'>" + action.description
-                    + "<br><br>時間 −" + effect.hours() + " 時間<br>HP " + signed(effect.hp())
-                    + (effect.plun() == 0 ? "" : "<br>プルン " + signed(effect.plun()))
-                    + (effect.ability() == 0 ? "" : "<br>基礎能力 " + signed(effect.ability())) + "</body></html>");
+                    + "<br><br>時間 −" + effect.hours().stripTrailingZeros().toPlainString() + " 時間<br>HP " + signed(effect.hp())
+                    + (effect.plun().signum() == 0 ? "" : "<br>プルン " + signed(effect.plun()))
+                    + (effect.ability().signum() == 0 ? "" : "<br>基礎能力 " + signed(effect.ability())) + "</body></html>");
             String reason = session.unavailableReason(action);
             button.setEnabled(reason.isEmpty());
             button.setToolTipText(reason.isEmpty() ? action.description : reason);
@@ -232,6 +237,11 @@ public class MainMenu extends JPanel {
 
     /** 増減値に符号を付ける。 */
     private static String signed(int value) { return value > 0 ? "+" + value : String.valueOf(value); }
+
+    /** 補正後の小数を丸めずに表示する。 */
+    private static String signed(BigDecimal value) {
+        return (value.signum() > 0 ? "+" : "") + value.stripTrailingZeros().toPlainString();
+    }
 
     /** 共通の文字スタイルを適用する。 */
     private static JLabel label(String text, int size) {

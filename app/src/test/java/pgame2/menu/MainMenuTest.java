@@ -9,6 +9,29 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MainMenuTest {
+    @Test
+    void fractionalEffectsAreAppliedBeforeRoundingAndLoggedAsActualChanges() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            pgame2.gameflow.GameSession game = new pgame2.gameflow.GameSession(new java.util.Random(0)) {
+                @Override public Effects effects(Action action) {
+                    if (action != Action.TRAIN) return super.effects(action);
+                    return new Effects(new java.math.BigDecimal("3.5"), new java.math.BigDecimal("-19.5"),
+                            new java.math.BigDecimal("2.5"), new java.math.BigDecimal("1.5"));
+                }
+            };
+            MainMenu menu = new MainMenu(game);
+            assertTrue(collect(menu, JLabel.class).stream().anyMatch(label -> label.getText().contains("HP -19.5")));
+            collect(menu, JButton.class).stream().filter(button -> button.getText().equals("実行する"))
+                    .toList().get(3).doClick();
+            assertEquals(80, game.getHp());
+            assertEquals(8, game.getHours());
+            assertEquals(2, game.getPlun());
+            assertEquals(1, game.getAbility());
+            assertTrue(collect(menu, JTextArea.class).getFirst().getText()
+                    .contains("HP -20 / プルン +2 / 基礎能力 +1"));
+        });
+    }
+
     /** ボタン操作によって資源表示・ログ・実行可否が連動することを確認する。 */
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {

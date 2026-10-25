@@ -1,6 +1,9 @@
 package pgame2.gameflow;
 
 import java.util.ArrayList;
+import java.math.BigDecimal;
+import pgame2.common.Modifier;
+import static pgame2.event.EventModifier.Target.*;
 import java.util.List;
 import java.util.random.RandomGenerator;
 import pgame2.battle.SimpleBattle;
@@ -51,19 +54,23 @@ public class GameSession {
     }
 
     /** 補正済みのコマンド効果。 */
-    public record Effects(int hours, int hp, int plun, int ability) { }
+    public record Effects(BigDecimal hours, BigDecimal hp, BigDecimal plun, BigDecimal ability) { }
 
     /** 基本値からイベント効果を計算し、終了後に補正を残さない。 */
     public Effects effects(Action action) {
-        Kind event = events.getActive();
-        int hpChange = action.hp;
-        int income = action.plun;
-        int growth = action.ability;
-        int duration = action.hours;
-        if (action == Action.WORK && event == Kind.HEAT) hpChange = -(int) Math.floor(-action.hp * 1.3);
-        if (action == Action.WORK && event == Kind.BOOM) income = (int) Math.floor(action.plun * 1.2);
-        if (action == Action.TRAIN && event == Kind.PROTEIN) { hpChange *= 2; growth *= 2; }
-        if (action == Action.REST && event == Kind.SLEEP) duration += 2;
+        BigDecimal hpChange = BigDecimal.valueOf(action.hp);
+        BigDecimal income = BigDecimal.valueOf(action.plun);
+        BigDecimal growth = BigDecimal.valueOf(action.ability);
+        BigDecimal duration = BigDecimal.valueOf(action.hours);
+        if (action == Action.WORK) {
+            hpChange = events.apply(WORK_HP_COST, -action.hp).negate();
+            income = events.apply(WORK_PLUN_REWARD, action.plun);
+        }
+        if (action == Action.TRAIN) {
+            hpChange = events.apply(TRAIN_HP_COST, -action.hp).negate();
+            growth = events.apply(TRAIN_ABILITY_GAIN, action.ability);
+        }
+        if (action == Action.REST) duration = events.apply(REST_HOURS_COST, action.hours);
         return new Effects(duration, hpChange, income, growth);
     }
 
@@ -101,8 +108,9 @@ public class GameSession {
     /** 実行不可の理由。HPを消費し尽くす行動は死亡判定の対象として許可する。 */
     public String unavailableReason(Action action) {
         if (isGameOver()) return "ゲームオーバーです";
-        if (hours < effects(action).hours()) return "時間が足りません";
-        if (plun + effects(action).plun() < 0) return "プルンが足りません";
+        Effects effect = effects(action);
+        if (BigDecimal.valueOf(hours).compareTo(effect.hours()) < 0) return "時間が足りません";
+        if (BigDecimal.valueOf(plun).add(effect.plun()).signum() < 0) return "プルンが足りません";
         return "";
     }
 
@@ -111,15 +119,15 @@ public class GameSession {
         String reason = unavailableReason(action);
         if (!reason.isEmpty()) throw new IllegalStateException(reason);
         Effects effect = effects(action);
-        hours -= effect.hours();
-        hp = Math.max(0, Math.min(MAX_HP, hp + effect.hp()));
-        plun += effect.plun();
-        ability += effect.ability();
+        changeHours(effect.hours().negate());
+        changeHp(effect.hp());
+        changePlun(effect.plun());
+        changeAbility(effect.ability());
         battleMessage = "";
         if (isGameOver()) return;
-        if (action == Action.WORK && battle.occurs(random, events.getActive() == Kind.BEASTS ? 30 : 0)) {
+        if (action == Action.WORK && battle.occurs(random, events.apply(BATTLE_CHANCE, SimpleBattle.BASE_CHANCE))) {
             int before = hp;
-            hp = battle.remainingHp(hp);
+            changeHp(BigDecimal.valueOf(battle.remainingHp(hp) - hp));
             battleMessage = "帰り道で魔獣に襲われた！ なんとか逃げ切ったが、体力を" + (before - hp) + "消耗した。";
         }
         objectives.recordAction(action == Action.WORK, action == Action.TRAIN);
@@ -147,8 +155,8 @@ public class GameSession {
     private void beginDay() {
         String notice = events.startDay(day);
         if (!notice.isEmpty()) notices.add(notice.strip());
-        hours = getDailyHours();
-        if (events.getActive() == Kind.SLEEP) hp = MAX_HP;
+        resetDailyHours();
+        if (events.getActive() == Kind.SLEEP) restoreHpToMax();
         if (objectives.startDay(day, plun)) notices.add("小目標予告\n" + objectives.describe(plun));
     }
 
@@ -156,7 +164,7 @@ public class GameSession {
     private void evaluateObjective(boolean endOfDay) {
         SmallObjectives.Result result = objectives.evaluate(day, plun, endOfDay);
         if (result == SmallObjectives.Result.NONE) return;
-        if (result == SmallObjectives.Result.SUCCESS) plun += SmallObjectives.REWARD;
+        if (result == SmallObjectives.Result.SUCCESS) changePlun(BigDecimal.valueOf(SmallObjectives.REWARD));
         notices.add(objectives.describe(plun));
     }
 
@@ -167,7 +175,27 @@ public class GameSession {
         return result;
     }
 
-    public int getDailyHours() { return DAILY_HOURS - (events.getActive() == Kind.SLEEP ? 1 : 0); }
+    /** HPの最終値を切り捨て、既存の上下限を適用する。 */
+    public void changeHp(BigDecimal delta) {
+        hp = Modifier.floor(BigDecimal.valueOf(hp).add(delta).max(BigDecimal.ZERO).min(BigDecimal.valueOf(MAX_HP)));
+    }
+
+    /** 所持プルンの最終値を切り捨てる。 */
+    public void changePlun(BigDecimal delta) { plun = Modifier.floor(BigDecimal.valueOf(plun).add(delta)); }
+
+    /** 基礎能力の最終値を切り捨てる。 */
+    public void changeAbility(BigDecimal delta) { ability = Modifier.floor(BigDecimal.valueOf(ability).add(delta)); }
+
+    /** 残り時間の最終値を切り捨てる。 */
+    public void changeHours(BigDecimal delta) { hours = Modifier.floor(BigDecimal.valueOf(hours).add(delta)); }
+
+    /** 朝の全回復を適用する。 */
+    private void restoreHpToMax() { hp = MAX_HP; }
+
+    /** 翌日の使用可能時間にリセットする。 */
+    private void resetDailyHours() { hours = getDailyHours(); }
+
+    public int getDailyHours() { return Modifier.floor(events.apply(pgame2.event.EventModifier.Target.DAILY_HOURS, DAILY_HOURS)); }
     public String getEventDescription() { return events.describe(); }
     public String getObjectiveDescription() { return objectives.describe(plun); }
     public String getBattleMessage() { return battleMessage; }

@@ -68,18 +68,18 @@ class ProgressionTest {
             game.execute(TRAIN);
             while (game.getDay() < 9) game.nextDay();
             if (kind == 0) {
-                assertEquals(-26, game.effects(WORK).hp());
-                assertEquals(-15, game.effects(TRAIN).hp());
+                assertEquals(0, java.math.BigDecimal.valueOf(-26).compareTo(game.effects(WORK).hp()));
+                assertEquals(0, java.math.BigDecimal.valueOf(-15).compareTo(game.effects(TRAIN).hp()));
             }
-            if (kind == 2) assertEquals(36, game.effects(WORK).plun());
+            if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(36).compareTo(game.effects(WORK).plun()));
             if (kind == 3) {
-                assertEquals(-30, game.effects(TRAIN).hp());
-                assertEquals(2, game.effects(TRAIN).ability());
+                assertEquals(0, java.math.BigDecimal.valueOf(-30).compareTo(game.effects(TRAIN).hp()));
+                assertEquals(0, java.math.BigDecimal.valueOf(2).compareTo(game.effects(TRAIN).ability()));
             }
             if (kind == 4) {
                 assertEquals(100, game.getHp());
                 assertEquals(11, game.getHours());
-                assertEquals(5, game.effects(REST).hours());
+                assertEquals(0, java.math.BigDecimal.valueOf(5).compareTo(game.effects(REST).hours()));
                 game.execute(TRAIN);
                 game.nextDay();
                 assertEquals(100, game.getHp());
@@ -89,10 +89,10 @@ class ProgressionTest {
             }
             while (game.getDay() < 19) game.nextDay();
             assertEquals(12, game.getDailyHours());
-            assertEquals(3, game.effects(REST).hours());
-            assertEquals(-20, game.effects(WORK).hp());
-            assertEquals(30, game.effects(WORK).plun());
-            assertEquals(1, game.effects(TRAIN).ability());
+            assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(REST).hours()));
+            assertEquals(0, java.math.BigDecimal.valueOf(-20).compareTo(game.effects(WORK).hp()));
+            assertEquals(0, java.math.BigDecimal.valueOf(30).compareTo(game.effects(WORK).plun()));
+            assertEquals(0, java.math.BigDecimal.valueOf(1).compareTo(game.effects(TRAIN).ability()));
         }
     }
 
