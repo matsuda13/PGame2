@@ -22,7 +22,7 @@ class MainMenuTest {
             assertTrue(collect(menu, JLabel.class).stream()
                     .anyMatch(label -> label.getText().contains("プルン +33")));
             actions.get(0).doClick();
-            assertEquals(33, game.getPlun());
+            assertEquals(133, game.getPlun());
             assertTrue(collect(menu, JTextArea.class).getFirst().getText().contains("プルン +33"));
         });
     }
@@ -43,7 +43,7 @@ class MainMenuTest {
                     .toList().get(3).doClick();
             assertEquals(80, game.getHp());
             assertEquals(8, game.getHours());
-            assertEquals(2, game.getPlun());
+            assertEquals(102, game.getPlun());
             assertEquals(1, game.getWorkEfficiency());
             assertTrue(collect(menu, JTextArea.class).getFirst().getText()
                     .contains("HP -20 / プルン +2 / 労働効率 +1"));
@@ -54,7 +54,10 @@ class MainMenuTest {
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            MainMenu menu = new MainMenu(new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }));
+            var game = new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
+            // 資金不足から労働で回復魔法を解禁する状態を明示的に用意する。
+            game.changePlun(java.math.BigDecimal.valueOf(-100));
+            MainMenu menu = new MainMenu(game);
             List<JButton> actions = new ArrayList<>();
             collect(menu, JButton.class).stream()
                     .filter(button -> button.getText().equals("実行する")).forEach(actions::add);

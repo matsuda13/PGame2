@@ -65,6 +65,8 @@ class ProgressionTest {
     void allEventModifiersAndRestAvailability() {
         for (int kind = 0; kind < 5; kind++) {
             GameSession game = new GameSession(fixed(kind));
+            // イベント検証中に生活費不足による死亡が混ざらないよう、資金を用意する。
+            game.changePlun(java.math.BigDecimal.valueOf(2000));
             game.execute(TRAIN);
             while (game.getDay() < 9) game.nextDay();
             if (kind == 0) {
@@ -134,6 +136,8 @@ class ProgressionTest {
     @Test
     void trainingCountsActionsAndRewardIsGrantedOnlyOnce() {
         GameSession game = new GameSession(fixed(3));
+        // Day 14までの生活費を確保し、報酬と生活費を含む収支を検証する。
+        game.changePlun(java.math.BigDecimal.valueOf(1000));
         while (game.getDay() < 9) game.nextDay();
         for (int i = 0; i < 5; i++) {
             game.execute(TRAIN);
@@ -141,10 +145,10 @@ class ProgressionTest {
             game.nextDay();
         }
         assertEquals(10, game.getWorkEfficiency());
-        assertEquals(60, game.getPlun());
+        assertEquals(510, game.getPlun()); // 初期100 + 準備1000 + 報酬60 - 13日分650。
         assertEquals(1, game.drainNotices().stream().filter(n -> n.contains("小目標達成")).count());
         assertTrue(game.drainNotices().isEmpty());
         game.nextDay();
-        assertEquals(60, game.getPlun());
+        assertEquals(460, game.getPlun()); // 翌日は生活費50だけ減り、報酬は再付与されない。
     }
 }

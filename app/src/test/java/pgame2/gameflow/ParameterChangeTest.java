@@ -19,7 +19,7 @@ class ParameterChangeTest {
             assertEquals(0, BigDecimal.ZERO.compareTo(game.effects(GameSession.Action.TRAIN).plun()));
             assertEquals(0, BigDecimal.valueOf(-15).compareTo(game.effects(GameSession.Action.HEAL).plun()));
             game.execute(GameSession.Action.WORK);
-            assertEquals(expected, game.getPlun());
+            assertEquals(100 + expected, game.getPlun());
         }
     }
 
@@ -30,7 +30,7 @@ class ParameterChangeTest {
         assertEquals(0, new BigDecimal("9.1").compareTo(income));
         GameSession game = new GameSession(new Random(0));
         game.changePlun(income);
-        assertEquals(9, game.getPlun());
+        assertEquals(109, game.getPlun());
     }
 
     @Test
@@ -49,7 +49,7 @@ class ParameterChangeTest {
         GameSession game = new GameSession(new Random(0));
         game.changePlun(new BigDecimal("30.9"));
         game.changePlun(new BigDecimal("-15.5"));
-        assertEquals(14, game.getPlun());
+        assertEquals(114, game.getPlun());
         game.changeWorkEfficiency(new BigDecimal("1.9"));
         assertEquals(1, game.getWorkEfficiency());
         game.changeHours(new BigDecimal("-3.5"));
