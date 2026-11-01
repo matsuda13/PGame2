@@ -9,6 +9,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import pgame2.gameflow.GameSession;
 import pgame2.gameflow.GameSession.Action;
+import pgame2.shop.ShopCatalog.Merchant;
+import pgame2.shop.ShopPanel;
 
 /** ステータス・行動選択・行動ログをまとめたメニュー。 */
 public class MainMenu extends JPanel {
@@ -130,12 +132,14 @@ public class MainMenu extends JPanel {
         return panel;
     }
 
-    /** ショップの入口を表示する。購入処理や画面遷移はまだ接続しない。 */
+    /** 時間や資源を消費せず、常設ショップの画面を開く。 */
     private JPanel createShop() {
         JPanel panel = actionCard("ショップ");
         panel.add(label("<html><body style='width:100px'>アイテムを購入する</body></html>", 15),
                 BorderLayout.CENTER);
-        panel.add(button("実行する"), BorderLayout.SOUTH);
+        JButton openShop = button("実行する");
+        openShop.addActionListener(event -> ShopPanel.open(this, Merchant.PERMANENT, session.getPlun()));
+        panel.add(openShop, BorderLayout.SOUTH);
         return panel;
     }
 
