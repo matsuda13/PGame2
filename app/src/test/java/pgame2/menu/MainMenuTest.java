@@ -58,7 +58,7 @@ class MainMenuTest {
             List<JButton> actions = new ArrayList<>();
             collect(menu, JButton.class).stream()
                     .filter(button -> button.getText().equals("実行する")).forEach(actions::add);
-            assertEquals(4, actions.size());
+            assertEquals(5, actions.size());
             assertFalse(actions.get(2).isEnabled());
             actions.get(0).doClick();
             assertTrue(actions.get(2).isEnabled());

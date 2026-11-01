@@ -74,10 +74,7 @@ public class MainMenu extends JPanel {
         progress.setBorder(new EmptyBorder(8, 18, 8, 18));
         scene.add(progress, BorderLayout.SOUTH);
         center.add(scene, BorderLayout.CENTER);
-        JPanel actions = new JPanel(new GridLayout(1, 4, 10, 0));
-        actions.setOpaque(false);
-        for (Action action : Action.values()) actions.add(createAction(action));
-        center.add(actions, BorderLayout.SOUTH);
+        center.add(createActionMenu(), BorderLayout.SOUTH);
         add(center, BorderLayout.CENTER);
         add(createLog(), BorderLayout.EAST);
         showNotices();
@@ -100,13 +97,51 @@ public class MainMenu extends JPanel {
         return panel;
     }
 
-    /** 行動の効果と実行ボタンを同じカードへ配置する。 */
-    private JPanel createAction(Action action) {
+    /** カードの寸法を保ち、行動メニューだけを横方向へスクロールする。 */
+    private JScrollPane createActionMenu() {
+        JPanel actions = new JPanel();
+        actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
+        actions.setOpaque(false);
+        for (Action action : Action.values()) {
+            actions.add(createAction(action));
+            actions.add(Box.createHorizontalStrut(10));
+        }
+        actions.add(createShop());
+        JScrollPane scroll = new JScrollPane(actions,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.getHorizontalScrollBar().setUnitIncrement(24);
+        return scroll;
+    }
+
+    /** 共通のカード寸法と内部レイアウトを設定する。 */
+    private JPanel actionCard(String name) {
         JPanel panel = paper();
         panel.setLayout(new BorderLayout(0, 12));
-        JLabel title = label(action.title, 22);
+        JLabel title = label(name, 22);
         title.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(title, BorderLayout.NORTH);
+        Dimension size = new Dimension(165, 265);
+        panel.setPreferredSize(size);
+        panel.setMinimumSize(size);
+        panel.setMaximumSize(size);
+        return panel;
+    }
+
+    /** ショップの入口を表示する。購入処理や画面遷移はまだ接続しない。 */
+    private JPanel createShop() {
+        JPanel panel = actionCard("ショップ");
+        panel.add(label("<html><body style='width:100px'>アイテムを購入する</body></html>", 15),
+                BorderLayout.CENTER);
+        panel.add(button("実行する"), BorderLayout.SOUTH);
+        return panel;
+    }
+
+    /** 行動の効果と実行ボタンを同じカードへ配置する。 */
+    private JPanel createAction(Action action) {
+        JPanel panel = actionCard(action.title);
         JLabel effects = label("", 15);
         effectLabels.put(action, effects);
         panel.add(effects, BorderLayout.CENTER);
@@ -114,7 +149,6 @@ public class MainMenu extends JPanel {
         execute.addActionListener(event -> execute(action));
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
-        panel.setPreferredSize(new Dimension(165, 265));
         return panel;
     }
 
