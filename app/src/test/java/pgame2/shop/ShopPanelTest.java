@@ -7,18 +7,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
+import pgame2.gameflow.GameSession;
+import pgame2.item.Item;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ShopPanelTest {
-    /** 両店舗で画像を読め、選択や閉じる操作と購入不可の状態を維持する。 */
+    /** 両店舗で選択・購入・資金不足・購入済み表示・閉じる操作を確認する。 */
     @Test
-    void merchantsShareSelectionAndDisabledPurchase() throws Exception {
+    void merchantsShareSelectionPurchaseAndClose() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             for (var merchant : ShopCatalog.Merchant.values()) {
                 assertNotNull(ShopPanel.class.getResource(merchant.imagePath));
                 AtomicBoolean closed = new AtomicBoolean();
-                ShopPanel panel = new ShopPanel(merchant, ShopCatalog.PREVIEW_PRODUCTS, 1250,
+                GameSession game = new GameSession(new java.util.Random(0));
+                game.changePlun(java.math.BigDecimal.valueOf(1150));
+                var stock = game.shopItems(merchant == ShopCatalog.Merchant.TRAVELER);
+                ShopPanel panel = new ShopPanel(merchant, stock, game,
                         () -> closed.set(true));
                 panel.setSize(panel.getPreferredSize());
                 layout(panel);
@@ -33,10 +38,19 @@ class ShopPanelTest {
                         .anyMatch(area -> area.getText().equals("商品を選択してください")));
                 list.setSelectedIndex(1);
                 assertTrue(collect(panel, JTextArea.class).stream()
-                        .anyMatch(area -> area.getText().startsWith("丈夫な作業着")));
-                assertFalse(purchase.isEnabled());
+                        .anyMatch(area -> area.getText().startsWith(stock.get(1).title())));
+                assertTrue(purchase.isEnabled());
                 purchase.doClick();
                 assertFalse(closed.get());
+                assertTrue(game.owns(stock.get(1)));
+                assertEquals(1250 - stock.get(1).price(), game.getPlun());
+                assertTrue(collect(panel, JLabel.class).stream().anyMatch(label -> label.getText().equals(
+                        String.format(java.util.Locale.JAPAN, "所持プルン  %,d PLN", game.getPlun()))));
+                assertEquals(12, game.getHours());
+                assertFalse(purchase.isEnabled());
+                assertEquals("購入済み", purchase.getText());
+                list.setSelectedIndex(0);
+                assertEquals(game.getPlun() >= stock.get(0).price(), purchase.isEnabled());
                 collect(panel, JButton.class).stream().filter(button -> button.getText().equals("閉じる"))
                         .findFirst().orElseThrow().doClick();
                 assertTrue(closed.get());
@@ -44,16 +58,34 @@ class ShopPanelTest {
         });
     }
 
+    /** 表示後に資金が減っていても、購入押下時に再確認して支払いを拒否する。 */
+    @Test
+    void purchaseRechecksCurrentBalance() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            GameSession game = new GameSession(new java.util.Random(0));
+            game.changePlun(java.math.BigDecimal.valueOf(400));
+            ShopPanel panel = new ShopPanel(ShopCatalog.Merchant.PERMANENT, game.shopItems(false), game, () -> {});
+            collect(panel, JList.class).getFirst().setSelectedIndex(0);
+            JButton purchase = collect(panel, JButton.class).stream().filter(b -> b.getText().equals("購入"))
+                    .findFirst().orElseThrow();
+            assertTrue(purchase.isEnabled());
+            game.changePlun(java.math.BigDecimal.valueOf(-1));
+            purchase.doClick();
+            assertEquals(499, game.getPlun());
+            assertFalse(game.owns(Item.TOOLBOX));
+            assertFalse(purchase.isEnabled());
+        });
+    }
+
     /** 商品数や説明の長さが増えても一覧と詳細の境界は動かない。 */
     @Test
     void longDescriptionsAndManyProductsStayInsideTheirRegions() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            List<ShopCatalog.Product> products = new ArrayList<>(ShopCatalog.PREVIEW_PRODUCTS);
+            List<Item> products = new ArrayList<>(List.of(Item.TOOLBOX, Item.WORKWEAR, Item.BED, Item.TEXTBOOK));
             for (int i = 0; i < 20; i++) {
-                products.add(new ShopCatalog.Product("長い名前の商品".repeat(8), "効果：未定",
-                        "長い説明文です。".repeat(300), 500));
+                products.add(Item.TOOLBOX);
             }
-            ShopPanel panel = new ShopPanel(ShopCatalog.Merchant.PERMANENT, products, 100, () -> {});
+            ShopPanel panel = new ShopPanel(ShopCatalog.Merchant.PERMANENT, products, new GameSession(new java.util.Random(0)), () -> {});
             panel.setSize(panel.getPreferredSize());
             layout(panel);
             JList<?> list = collect(panel, JList.class).getFirst();
@@ -61,6 +93,8 @@ class ShopPanelTest {
             Rectangle bounds = listScroll.getBounds();
             assertTrue(listScroll.getVerticalScrollBar().isVisible());
             list.setSelectedIndex(products.size() - 1);
+            collect(panel, JTextArea.class).stream().filter(area -> area.getText().startsWith(Item.TOOLBOX.title()))
+                    .findFirst().orElseThrow().setText("長い説明文です。".repeat(300));
             layout(panel);
             assertEquals(bounds, listScroll.getBounds());
             assertEquals(76, list.getCellBounds(0, 0).height);

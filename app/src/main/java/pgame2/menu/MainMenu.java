@@ -145,7 +145,15 @@ public class MainMenu extends JPanel {
         panel.add(label("<html><body style='width:100px'>アイテムを購入する</body></html>", 15),
                 BorderLayout.CENTER);
         JButton openShop = button("実行する");
-        openShop.addActionListener(event -> ShopPanel.open(this, merchant, session.getPlun()));
+        openShop.addActionListener(event -> {
+            int before = session.getPlun();
+            ShopPanel.open(this, merchant, session);
+            if (before != session.getPlun()) {
+                append(merchant.title + "で買い物：プルン " + signed(session.getPlun() - before));
+                message.setText("買い物が終わりました。アイテムの効果が有効になりました。");
+            }
+            refresh();
+        });
         panel.add(openShop, BorderLayout.SOUTH);
         return panel;
     }
@@ -219,13 +227,26 @@ public class MainMenu extends JPanel {
         JOptionPane.showOptionDialog(this, summary, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"翌日へ"}, "翌日へ");
         append(summary + "\n");
-        String summaryPayLivingCost = "Day " + session.getDay() + " の生活費を払いました。\n\n"
-                + GameSession.LIVING_COST + "プルン失いました。";
+        int finishedDay = session.getDay();
+        int beforeHp = session.getHp();
+        int beforeMaxHp = session.getMaxHp();
+        session.nextDay();
+        String summaryPayLivingCost = "Day " + finishedDay
+                + (session.isGameOver() ? " の日終了処理\n\n" : " の日終了・翌朝の処理\n\n")
+                + "生活費の支払い：" + session.getLastLivingCostPaid() + "プルン\n"
+                + (session.hadLivingCostShortage() ? "生活費不足によりHPを50失いました。\n" : "")
+                + "HP " + beforeHp + " → " + session.getHp() + "\n"
+                + "最大HP " + beforeMaxHp + " → " + session.getMaxHp();
         JOptionPane.showOptionDialog(this, summaryPayLivingCost, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"OK"}, "OK");
         append(summaryPayLivingCost + "\n");
-        session.nextDay();
         showNotices();
+        if (session.isGameOver()) {
+            message.setText("HPが0になりました。ゲームオーバー。");
+            append("GAME OVER — 最初からやり直せます。\n");
+            refresh();
+            return;
+        }
         startHp = session.getHp();
         startPlun = session.getPlun();
         startWorkEfficiency = session.getWorkEfficiency();
@@ -248,12 +269,13 @@ public class MainMenu extends JPanel {
 
     /** 最新の状態と実行条件を表示へ反映する。 */
     private void refresh() {
-        boolean travelerAvailable = session.getDay() == 1 || session.getDay() % 10 == 0;
+        boolean travelerAvailable = session.isTravelerDay();
         travelerCard.setVisible(travelerAvailable);
         travelerGap.setVisible(travelerAvailable);
         day.setText("Day " + session.getDay());
+        hp.setMaximum(session.getMaxHp());
         hp.setValue(session.getHp());
-        hp.setString(session.getHp() + " / " + GameSession.MAX_HP);
+        hp.setString(session.getHp() + " / " + session.getMaxHp());
         hours.setMaximum(session.getDailyHours());
         hours.setValue(session.getHours());
         hours.setString(session.getHours() + " / " + session.getDailyHours());

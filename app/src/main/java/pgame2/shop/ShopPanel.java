@@ -13,7 +13,8 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import pgame2.shop.ShopCatalog.Merchant;
-import pgame2.shop.ShopCatalog.Product;
+import pgame2.item.Item;
+import pgame2.gameflow.GameSession;
 
 /** 商人画像・商品一覧・詳細欄を固定配置するショップの画面。 */
 public final class ShopPanel extends JPanel {
@@ -24,14 +25,21 @@ public final class ShopPanel extends JPanel {
     /** 商品選択時の淡い背景色。 */
     private static final Color SELECTED = new Color(218, 230, 216);
     /** 単一選択の商品一覧。 */
-    private final JList<Product> products;
+    private final JList<Item> products;
     /** 固定領域内で折り返す商品詳細。 */
     private final JTextArea description = textArea("商品を選択してください", 16);
-    /** 機能設計が確定するまで無効にしておく購入ボタン。 */
+    /** 選択商品と資金に応じて更新する購入ボタン。 */
     private final JButton purchase = new JButton("購入");
+    /** 購入処理を所有するゲーム状態。 */
+    private final GameSession session;
+    /** 購入直後にも更新する所持金表示。 */
+    private final JLabel balance = label("", 18);
+    /** 購入できない理由や購入結果。 */
+    private final JLabel status = label("商品を選択してください", 13);
 
-    /** 店舗ごとの差し替えデータを受け取り、ゲーム状態を変更せず画面を構築する。 */
-    public ShopPanel(Merchant merchant, List<Product> catalog, int plun, Runnable close) {
+    /** 店舗ごとの商品一覧と購入先のセッションを受け取る。 */
+    public ShopPanel(Merchant merchant, List<Item> catalog, GameSession session, Runnable close) {
+        this.session = session;
         setLayout(new BorderLayout(18, 18));
         setBackground(PAPER);
         setBorder(new EmptyBorder(20, 22, 22, 22));
@@ -40,7 +48,7 @@ public final class ShopPanel extends JPanel {
         JPanel header = panel(new BorderLayout(16, 0));
         header.add(label(merchant.title, 26), BorderLayout.WEST);
         JPanel controls = panel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
-        controls.add(label(String.format(Locale.JAPAN, "所持プルン  %,d PLN", plun), 18));
+        controls.add(balance);
         JButton closeButton = new JButton("閉じる");
         closeButton.setFont(new Font(Font.DIALOG, Font.PLAIN, 16));
         closeButton.addActionListener(event -> close.run());
@@ -62,8 +70,8 @@ public final class ShopPanel extends JPanel {
 
         JPanel goods = panel(new BorderLayout(0, 14));
         JPanel listing = panel(new BorderLayout(0, 10));
-        listing.add(label("商品一覧（仮）", 20), BorderLayout.NORTH);
-        products = new JList<>(catalog.toArray(Product[]::new));
+        listing.add(label("商品一覧", 20), BorderLayout.NORTH);
+        products = new JList<>(catalog.toArray(Item[]::new));
         products.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         products.setFixedCellHeight(76);
         products.setBackground(PAPER);
@@ -80,23 +88,24 @@ public final class ShopPanel extends JPanel {
                 BorderFactory.createLineBorder(new Color(185, 168, 142)), new EmptyBorder(14, 14, 14, 14)));
         details.add(scroll(description), BorderLayout.CENTER);
         JPanel footer = panel(new BorderLayout(12, 0));
-        footer.add(label("商品は仮表示です。購入は準備中です。", 13), BorderLayout.CENTER);
+        footer.add(status, BorderLayout.CENTER);
         purchase.setFont(new Font(Font.DIALOG, Font.BOLD, 17));
         purchase.setEnabled(false);
-        purchase.setToolTipText("購入機能は準備中です");
+        purchase.addActionListener(event -> purchaseSelected());
         footer.add(purchase, BorderLayout.EAST);
         details.add(footer, BorderLayout.SOUTH);
         goods.add(details, BorderLayout.SOUTH);
         body.add(goods, BorderLayout.CENTER);
         add(body, BorderLayout.CENTER);
+        refreshPurchase();
     }
 
     /** メイン画面を親とする固定サイズのモーダル画面を開く。 */
-    public static void open(Component parent, Merchant merchant, int plun) {
+    public static void open(Component parent, Merchant merchant, GameSession session) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), merchant.title,
                 Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        dialog.setContentPane(new ShopPanel(merchant, ShopCatalog.PREVIEW_PRODUCTS, plun, dialog::dispose));
+        dialog.setContentPane(new ShopPanel(merchant, session.shopItems(merchant == Merchant.TRAVELER), session, dialog::dispose));
         dialog.setResizable(false);
         dialog.pack();
         dialog.setLocationRelativeTo(parent);
@@ -108,12 +117,39 @@ public final class ShopPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-    /** 選択だけを詳細に反映し、購入や資源変更は行わない。 */
+    /** 選択時は詳細と購入可否のみを更新する。 */
     private void showSelection() {
-        Product selected = products.getSelectedValue();
+        Item selected = products.getSelectedValue();
         description.setText(selected == null ? "商品を選択してください"
-                : selected.name() + "\n\n" + selected.effect() + "\n\n" + selected.description());
+                : selected.title() + "\n\n" + selected.effect() + "\n\n" + selected.description());
         description.setCaretPosition(0);
+        refreshPurchase();
+    }
+
+    /** 最新の所持金と購入済み状態を表示へ反映する。 */
+    private void refreshPurchase() {
+        balance.setText(String.format(Locale.JAPAN, "所持プルン  %,d PLN", session.getPlun()));
+        Item selected = products.getSelectedValue();
+        String reason = selected == null
+                ? (products.getModel().getSize() == 0 ? "今回の商品はありません" : "商品を選択してください")
+                : session.purchaseUnavailableReason(selected);
+        purchase.setText(selected != null && session.owns(selected) ? "購入済み" : "購入");
+        purchase.setEnabled(reason.isEmpty());
+        purchase.setToolTipText(reason.isEmpty() ? "この商品を購入します" : reason);
+        status.setText(reason.isEmpty() ? "購入すると永続的に効果を発揮します" : reason);
+        products.repaint();
+    }
+
+    /** 押下時に条件を再確認し、購入後も画面を開いたままにする。 */
+    private void purchaseSelected() {
+        Item selected = products.getSelectedValue();
+        if (selected == null || !session.purchaseUnavailableReason(selected).isEmpty()) {
+            refreshPurchase();
+            return;
+        }
+        session.purchase(selected);
+        refreshPurchase();
+        status.setText(selected.title() + "を購入しました");
     }
 
     /** 透明な領域を作り、紙色を共用する。 */
@@ -153,9 +189,9 @@ public final class ShopPanel extends JPanel {
     }
 
     /** 固定寸法の仮アイコン、商品名、右揃え価格を一行で描画する。 */
-    private static final class ProductRenderer implements ListCellRenderer<Product> {
+    private final class ProductRenderer implements ListCellRenderer<Item> {
         @Override
-        public Component getListCellRendererComponent(JList<? extends Product> list, Product product,
+        public Component getListCellRendererComponent(JList<? extends Item> list, Item product,
                 int index, boolean selected, boolean focused) {
             JPanel row = new JPanel(new BorderLayout(12, 0));
             row.setBackground(selected ? SELECTED : PAPER);
@@ -166,7 +202,9 @@ public final class ShopPanel extends JPanel {
             icon.setHorizontalAlignment(SwingConstants.CENTER);
             icon.setPreferredSize(new Dimension(36, 36));
             row.add(icon, BorderLayout.WEST);
-            row.add(label(product.name(), 17), BorderLayout.CENTER);
+            JLabel title = label(product.title() + (session.owns(product) ? " （購入済み）" : ""), 17);
+            if (session.owns(product)) title.setForeground(Color.GRAY);
+            row.add(title, BorderLayout.CENTER);
             JLabel price = label(String.format(Locale.JAPAN, "%,d PLN", product.price()), 15);
             price.setHorizontalAlignment(SwingConstants.RIGHT);
             row.add(price, BorderLayout.EAST);

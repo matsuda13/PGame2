@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 import pgame2.event.SituationEvents.Kind;
-import static pgame2.event.EventModifier.Target.*;
+import static pgame2.effect.EffectTarget.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ParameterChangeTest {
