@@ -61,7 +61,7 @@ class MainMenuTest {
             List<JButton> actions = new ArrayList<>();
             collect(menu, JButton.class).stream()
                     .filter(button -> button.getText().equals("実行する")).forEach(actions::add);
-            assertEquals(5, actions.size());
+            assertEquals(6, actions.size());
             assertFalse(actions.get(2).isEnabled());
             actions.get(0).doClick();
             assertTrue(actions.get(2).isEnabled());
@@ -74,6 +74,34 @@ class MainMenuTest {
             assertTrue(log.getText().contains("HP +20"));
             assertTrue(collect(menu, JProgressBar.class).stream()
                     .anyMatch(bar -> bar.getString().equals("7 / 12")));
+        });
+    }
+
+    /** 日付変更後の更新でも、初日と10の倍数の日だけショップの隣に行商人を表示する。 */
+    @Test
+    void travelerAppearsOnlyOnFirstDayAndMultiplesOfTen() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = new pgame2.gameflow.GameSession(new java.util.Random(0));
+            game.changePlun(java.math.BigDecimal.valueOf(10000));
+            MainMenu menu = new MainMenu(game);
+            Container traveler = collect(menu, JLabel.class).stream()
+                    .filter(label -> label.getText().equals("行商人")).findFirst().orElseThrow().getParent();
+            Container shop = collect(menu, JLabel.class).stream()
+                    .filter(label -> label.getText().equals("ショップ")).findFirst().orElseThrow().getParent();
+            Component[] cards = shop.getParent().getComponents();
+            int shopIndex = java.util.Arrays.asList(cards).indexOf(shop);
+            assertSame(traveler, cards[shopIndex + 2]);
+            assertTrue(traveler.isVisible());
+            JButton rest = collect(menu, JButton.class).stream()
+                    .filter(button -> button.getText().equals("実行する")).toList().get(1);
+            for (int day = 2; day <= 21; day++) {
+                game.nextDay();
+                // 既存の行動による画面更新経路を通し、同じカードの表示切り替えを検証する。
+                rest.doClick();
+                assertEquals(day % 10 == 0, traveler.isVisible(), "Day " + day);
+                assertEquals(traveler.isVisible(), cards[shopIndex + 1].isVisible());
+                assertTrue(shop.isVisible());
+            }
         });
     }
 

@@ -46,6 +46,10 @@ public class MainMenu extends JPanel {
     private final JButton endDay = button("一日を終了する");
     /** ゲームオーバー時の再開始ボタン。 */
     private final JButton restart = button("最初からやり直す");
+    /** 出現日にだけ表示する行商人カード。 */
+    private JPanel travelerCard;
+    /** 行商人カードと一緒に表示を切り替える余白。 */
+    private final Component travelerGap = Box.createHorizontalStrut(10);
     /** 一日開始時の体力。 */
     private int startHp;
     /** 一日開始時の所持金。 */
@@ -108,7 +112,10 @@ public class MainMenu extends JPanel {
             actions.add(createAction(action));
             actions.add(Box.createHorizontalStrut(10));
         }
-        actions.add(createShop());
+        actions.add(createShop(Merchant.PERMANENT));
+        actions.add(travelerGap);
+        travelerCard = createShop(Merchant.TRAVELER);
+        actions.add(travelerCard);
         JScrollPane scroll = new JScrollPane(actions,
                 JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -132,13 +139,13 @@ public class MainMenu extends JPanel {
         return panel;
     }
 
-    /** 時間や資源を消費せず、常設ショップの画面を開く。 */
-    private JPanel createShop() {
-        JPanel panel = actionCard("ショップ");
+    /** 時間や資源を消費せず、指定された商人の画面を開く。 */
+    private JPanel createShop(Merchant merchant) {
+        JPanel panel = actionCard(merchant == Merchant.PERMANENT ? "ショップ" : "行商人");
         panel.add(label("<html><body style='width:100px'>アイテムを購入する</body></html>", 15),
                 BorderLayout.CENTER);
         JButton openShop = button("実行する");
-        openShop.addActionListener(event -> ShopPanel.open(this, Merchant.PERMANENT, session.getPlun()));
+        openShop.addActionListener(event -> ShopPanel.open(this, merchant, session.getPlun()));
         panel.add(openShop, BorderLayout.SOUTH);
         return panel;
     }
@@ -241,6 +248,9 @@ public class MainMenu extends JPanel {
 
     /** 最新の状態と実行条件を表示へ反映する。 */
     private void refresh() {
+        boolean travelerAvailable = session.getDay() == 1 || session.getDay() % 10 == 0;
+        travelerCard.setVisible(travelerAvailable);
+        travelerGap.setVisible(travelerAvailable);
         day.setText("Day " + session.getDay());
         hp.setValue(session.getHp());
         hp.setString(session.getHp() + " / " + GameSession.MAX_HP);
