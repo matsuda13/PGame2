@@ -1,14 +1,16 @@
 package pgame2.event;
 
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
 import pgame2.common.Modifier;
+import pgame2.common.ModifierContext;
+import pgame2.effect.EffectTarget;
+import pgame2.effect.GameEffect;
 import static pgame2.common.Modifier.*;
 import static pgame2.event.EventModifier.modifier;
-import static pgame2.event.EventModifier.Target.*;
+import static pgame2.effect.EffectTarget.*;
 import java.util.random.RandomGenerator;
 
 /** 予告済みイベントと開催期間を管理する。 */
@@ -22,7 +24,7 @@ public class SituationEvents {
     /** 予告から開始までの日数。 */
     public static final int NOTICE_DAYS = 8;
     /** 状況変化の種類。 */
-    public enum Kind {
+    public enum Kind implements EventEffect, GameEffect.Numeric, GameEffect.DayStart {
         HEAT("酷暑", "", modifier(WORK_HP_COST, percent(30))),
         BEASTS("魔獣活発化", "", modifier(BATTLE_CHANCE, points(30))),
         BOOM("好景気", "", modifier(WORK_PLUN_REWARD, percent(20))),
@@ -45,12 +47,20 @@ public class SituationEvents {
         }
 
         /** 指定対象の補正を合算し、端数を保持した結果を返す。 */
-        public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
-            List<Modifier> combined = new ArrayList<>(Arrays.asList(additional));
-            modifiers.stream().filter(m -> m.target() == target)
-                    .map(EventModifier::modifier).forEach(combined::add);
-            return Modifier.apply(BigDecimal.valueOf(base), combined);
+        public BigDecimal apply(EffectTarget target, int base, Modifier... additional) {
+            ModifierContext context = new ModifierContext();
+            Arrays.stream(additional).forEach(context::add);
+            collect(target, null, context);
+            return context.calculate(BigDecimal.valueOf(base));
         }
+
+        @Override
+        public void collect(EffectTarget target, State state, ModifierContext context) {
+            modifiers.stream().filter(m -> m.target() == target).map(EventModifier::modifier).forEach(context::add);
+        }
+
+        @Override
+        public boolean restoresHp() { return this == SLEEP; }
     }
     /** 抽選元。 */
     private final RandomGenerator random;
@@ -93,8 +103,20 @@ public class SituationEvents {
     public Kind getActive() { return active; }
     public Kind getUpcoming() { return upcoming; }
 
+    /** 開催中のイベントから、指定された計算の補正値だけを収集する。 */
+    public void collect(EffectTarget target, GameEffect.State state, ModifierContext context) {
+        EventEffect effect = active;
+        if (effect instanceof GameEffect.Numeric numeric) numeric.collect(target, state, context);
+    }
+
+    /** 朝の効果をイベント自身へ問い合わせる。 */
+    public boolean restoresHpAtDayStart() {
+        EventEffect effect = active;
+        return effect instanceof GameEffect.DayStart start && start.restoresHp();
+    }
+
     /** 開催中の補正と追加補正を合算し、計算途中の端数を保持する。 */
-    public BigDecimal apply(EventModifier.Target target, int base, Modifier... additional) {
+    public BigDecimal apply(EffectTarget target, int base, Modifier... additional) {
         return active == null ? Modifier.apply(BigDecimal.valueOf(base), Arrays.asList(additional))
                 : active.apply(target, base, additional);
     }

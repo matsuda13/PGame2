@@ -9,6 +9,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import pgame2.gameflow.GameSession;
 import pgame2.gameflow.GameSession.Action;
+import pgame2.shop.ShopCatalog.Merchant;
+import pgame2.shop.ShopPanel;
 
 /** ステータス・行動選択・行動ログをまとめたメニュー。 */
 public class MainMenu extends JPanel {
@@ -44,6 +46,10 @@ public class MainMenu extends JPanel {
     private final JButton endDay = button("一日を終了する");
     /** ゲームオーバー時の再開始ボタン。 */
     private final JButton restart = button("最初からやり直す");
+    /** 出現日にだけ表示する行商人カード。 */
+    private JPanel travelerCard;
+    /** 行商人カードと一緒に表示を切り替える余白。 */
+    private final Component travelerGap = Box.createHorizontalStrut(10);
     /** 一日開始時の体力。 */
     private int startHp;
     /** 一日開始時の所持金。 */
@@ -74,10 +80,7 @@ public class MainMenu extends JPanel {
         progress.setBorder(new EmptyBorder(8, 18, 8, 18));
         scene.add(progress, BorderLayout.SOUTH);
         center.add(scene, BorderLayout.CENTER);
-        JPanel actions = new JPanel(new GridLayout(1, 4, 10, 0));
-        actions.setOpaque(false);
-        for (Action action : Action.values()) actions.add(createAction(action));
-        center.add(actions, BorderLayout.SOUTH);
+        center.add(createActionMenu(), BorderLayout.SOUTH);
         add(center, BorderLayout.CENTER);
         add(createLog(), BorderLayout.EAST);
         showNotices();
@@ -100,13 +103,64 @@ public class MainMenu extends JPanel {
         return panel;
     }
 
-    /** 行動の効果と実行ボタンを同じカードへ配置する。 */
-    private JPanel createAction(Action action) {
+    /** カードの寸法を保ち、行動メニューだけを横方向へスクロールする。 */
+    private JScrollPane createActionMenu() {
+        JPanel actions = new JPanel();
+        actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
+        actions.setOpaque(false);
+        for (Action action : Action.values()) {
+            actions.add(createAction(action));
+            actions.add(Box.createHorizontalStrut(10));
+        }
+        actions.add(createShop(Merchant.PERMANENT));
+        actions.add(travelerGap);
+        travelerCard = createShop(Merchant.TRAVELER);
+        actions.add(travelerCard);
+        JScrollPane scroll = new JScrollPane(actions,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.getHorizontalScrollBar().setUnitIncrement(24);
+        return scroll;
+    }
+
+    /** 共通のカード寸法と内部レイアウトを設定する。 */
+    private JPanel actionCard(String name) {
         JPanel panel = paper();
         panel.setLayout(new BorderLayout(0, 12));
-        JLabel title = label(action.title, 22);
+        JLabel title = label(name, 22);
         title.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(title, BorderLayout.NORTH);
+        Dimension size = new Dimension(165, 265);
+        panel.setPreferredSize(size);
+        panel.setMinimumSize(size);
+        panel.setMaximumSize(size);
+        return panel;
+    }
+
+    /** 時間や資源を消費せず、指定された商人の画面を開く。 */
+    private JPanel createShop(Merchant merchant) {
+        JPanel panel = actionCard(merchant == Merchant.PERMANENT ? "ショップ" : "行商人");
+        panel.add(label("<html><body style='width:100px'>アイテムを購入する</body></html>", 15),
+                BorderLayout.CENTER);
+        JButton openShop = button("実行する");
+        openShop.addActionListener(event -> {
+            int before = session.getPlun();
+            ShopPanel.open(this, merchant, session);
+            if (before != session.getPlun()) {
+                append(merchant.title + "で買い物：プルン " + signed(session.getPlun() - before));
+                message.setText("買い物が終わりました。アイテムの効果が有効になりました。");
+            }
+            refresh();
+        });
+        panel.add(openShop, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    /** 行動の効果と実行ボタンを同じカードへ配置する。 */
+    private JPanel createAction(Action action) {
+        JPanel panel = actionCard(action.title);
         JLabel effects = label("", 15);
         effectLabels.put(action, effects);
         panel.add(effects, BorderLayout.CENTER);
@@ -114,7 +168,6 @@ public class MainMenu extends JPanel {
         execute.addActionListener(event -> execute(action));
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
-        panel.setPreferredSize(new Dimension(165, 265));
         return panel;
     }
 
@@ -174,13 +227,26 @@ public class MainMenu extends JPanel {
         JOptionPane.showOptionDialog(this, summary, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"翌日へ"}, "翌日へ");
         append(summary + "\n");
-        String summaryPayLivingCost = "Day " + session.getDay() + " の生活費を払いました。\n\n"
-                + GameSession.LIVING_COST + "プルン失いました。";
+        int finishedDay = session.getDay();
+        int beforeHp = session.getHp();
+        int beforeMaxHp = session.getMaxHp();
+        session.nextDay();
+        String summaryPayLivingCost = "Day " + finishedDay
+                + (session.isGameOver() ? " の日終了処理\n\n" : " の日終了・翌朝の処理\n\n")
+                + "生活費の支払い：" + session.getLastLivingCostPaid() + "プルン\n"
+                + (session.hadLivingCostShortage() ? "生活費不足によりHPを50失いました。\n" : "")
+                + "HP " + beforeHp + " → " + session.getHp() + "\n"
+                + "最大HP " + beforeMaxHp + " → " + session.getMaxHp();
         JOptionPane.showOptionDialog(this, summaryPayLivingCost, "一日の終了", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.INFORMATION_MESSAGE, null, new String[] {"OK"}, "OK");
         append(summaryPayLivingCost + "\n");
-        session.nextDay();
         showNotices();
+        if (session.isGameOver()) {
+            message.setText("HPが0になりました。ゲームオーバー。");
+            append("GAME OVER — 最初からやり直せます。\n");
+            refresh();
+            return;
+        }
         startHp = session.getHp();
         startPlun = session.getPlun();
         startWorkEfficiency = session.getWorkEfficiency();
@@ -203,9 +269,13 @@ public class MainMenu extends JPanel {
 
     /** 最新の状態と実行条件を表示へ反映する。 */
     private void refresh() {
+        boolean travelerAvailable = session.isTravelerDay();
+        travelerCard.setVisible(travelerAvailable);
+        travelerGap.setVisible(travelerAvailable);
         day.setText("Day " + session.getDay());
+        hp.setMaximum(session.getMaxHp());
         hp.setValue(session.getHp());
-        hp.setString(session.getHp() + " / " + GameSession.MAX_HP);
+        hp.setString(session.getHp() + " / " + session.getMaxHp());
         hours.setMaximum(session.getDailyHours());
         hours.setValue(session.getHours());
         hours.setString(session.getHours() + " / " + session.getDailyHours());

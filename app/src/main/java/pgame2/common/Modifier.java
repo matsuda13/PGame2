@@ -29,17 +29,9 @@ public record Modifier(Type type, BigDecimal value) {
 
     /** 割合合算、固定値合算、倍率の順に適用し、丸めずに返す。 */
     public static BigDecimal apply(BigDecimal base, List<Modifier> modifiers) {
-        BigDecimal percent = BigDecimal.ZERO;
-        BigDecimal fixed = BigDecimal.ZERO;
-        BigDecimal multiplier = BigDecimal.ONE;
-        for (Modifier modifier : modifiers) {
-            switch (modifier.type) {
-                case PERCENT -> percent = percent.add(modifier.value);
-                case FIXED, POINTS -> fixed = fixed.add(modifier.value);
-                case MULTIPLY -> multiplier = multiplier.multiply(modifier.value);
-            }
-        }
-        return base.multiply(BigDecimal.ONE.add(percent.movePointLeft(2))).add(fixed).multiply(multiplier);
+        ModifierContext context = new ModifierContext();
+        modifiers.forEach(context::add);
+        return context.calculate(base);
     }
 
     /** 最終値だけを負数も含めて小数点以下切り捨てする。 */
