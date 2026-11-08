@@ -2,10 +2,12 @@ package pgame2.animation;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import javax.swing.JProgressBar;
 
-/** HPと時間の増減を固定速度で順番に再生する。 */
-public final class GaugeAnimationManager extends AnimationQueue<GaugeAnimationManager.Change> {
+/** ゲージごとの増減キューを、共通のタイマーで同時に再生する。 */
+public final class GaugeAnimationManager extends AnimationQueue<Deque<GaugeAnimationManager.Change>> {
     /** 各ゲージの最新の確定値。 */
     private final Map<JProgressBar, Integer> targets = new IdentityHashMap<>();
 
@@ -35,18 +37,32 @@ public final class GaugeAnimationManager extends AnimationQueue<GaugeAnimationMa
         if (!Double.isFinite(speed) || speed <= 0) throw new IllegalArgumentException("速度は正の有限値が必要です");
         Integer old = targets.put(bar, value);
         if (old == null || bar.getMaximum() != maximum) {
-            queue.removeIf(change -> change.bar == bar);
+            queue.removeIf(changes -> changes.getFirst().bar == bar);
             bar.setMaximum(maximum);
             bar.setValue(value);
         } else if (old != value) {
-            enqueue(new Change(bar, value, speed));
+            Deque<Change> changes = queue.stream()
+                    .filter(pending -> pending.getFirst().bar == bar).findFirst().orElse(null);
+            if (changes == null) {
+                changes = new ArrayDeque<>();
+                changes.addLast(new Change(bar, value, speed));
+                enqueue(changes);
+            } else {
+                changes.addLast(new Change(bar, value, speed));
+            }
         }
         // 操作判断に使えるよう、数値は確定状態を表示する。
         bar.setString(value + " / " + maximum);
     }
 
     @Override
-    protected boolean update(Change change, double seconds) {
+    protected void updateFrame(double seconds) {
+        queue.removeIf(changes -> update(changes, seconds));
+    }
+
+    @Override
+    protected boolean update(Deque<Change> changes, double seconds) {
+        Change change = changes.getFirst();
         if (!change.started) {
             change.value = change.bar.getValue();
             change.started = true;
@@ -56,7 +72,8 @@ public final class GaugeAnimationManager extends AnimationQueue<GaugeAnimationMa
         change.value = Math.abs(distance) <= step ? change.target
                 : change.value + Math.copySign(step, distance);
         change.bar.setValue((int) Math.round(change.value));
-        return change.value == change.target;
+        if (change.value == change.target) changes.removeFirst();
+        return changes.isEmpty();
     }
 
     /** 最新の確定値へ揃えて全演出を取り消す。 */

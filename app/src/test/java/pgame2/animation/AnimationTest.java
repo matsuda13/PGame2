@@ -5,7 +5,34 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationTest {
-    /** 連続操作でも途中の増減を省略せず、指定速度で順番に再生する。 */
+    /** 最大値変更は対象だけを即時反映し、他ゲージは停止・再開後も進む。 */
+    @Test
+    void maximumChangeDoesNotInterruptAnotherGauge() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var manager = new GaugeAnimationManager();
+            var hp = new JProgressBar(0, 100);
+            var hours = new JProgressBar(0, 12);
+            manager.show(hp, 100, 100, 20);
+            manager.show(hours, 12, 12, 4);
+            manager.show(hp, 60, 100, 20);
+            manager.show(hours, 4, 12, 4);
+            manager.advance(.5);
+            manager.setPaused(true);
+            manager.advance(1);
+            assertEquals(90, hp.getValue());
+            assertEquals(10, hours.getValue());
+            manager.show(hp, 110, 120, 20);
+            manager.setPaused(false);
+            manager.advance(.5);
+            assertEquals(110, hp.getValue());
+            assertEquals(8, hours.getValue());
+            manager.cancel();
+            assertEquals(4, hours.getValue());
+            assertTrue(manager.queue.isEmpty());
+        });
+    }
+
+    /** 別ゲージは同時に進み、同じゲージの連続操作は順番に再生する。 */
     @Test
     void gaugesKeepOrderedChangesAndFixedSpeed() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
@@ -19,12 +46,10 @@ class AnimationTest {
             manager.show(hp, 90, 100, 20);
             manager.advance(.5);
             assertEquals(90, hp.getValue());
-            assertEquals(12, hours.getValue());
-            manager.advance(.5);
-            assertEquals(80, hp.getValue());
-            manager.advance(.5);
             assertEquals(10, hours.getValue());
             manager.advance(.5);
+            assertEquals(80, hp.getValue());
+            assertEquals(8, hours.getValue());
             manager.advance(.5);
             assertEquals(90, hp.getValue());
             assertEquals(8, hours.getValue());

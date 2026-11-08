@@ -43,8 +43,13 @@ abstract class AnimationQueue<T> {
             return;
         }
         if (paused) return;
-        if (update(queue.getFirst(), seconds)) queue.removeFirst();
+        updateFrame(seconds);
         if (queue.isEmpty()) timer.stop();
+    }
+
+    /** 通常は先頭だけを進め、並列再生する種類では更新単位を変更できる。 */
+    protected void updateFrame(double seconds) {
+        if (update(queue.getFirst(), seconds)) queue.removeFirst();
     }
 
     /** 演出を更新し、完了したか返す。 */
