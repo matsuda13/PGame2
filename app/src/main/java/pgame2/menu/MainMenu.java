@@ -2,6 +2,7 @@ package pgame2.menu;
 
 import java.math.BigDecimal;
 import pgame2.common.Modifier;
+import pgame2.animation.AnimationEffectManager;
 
 import java.awt.*;
 import java.util.EnumMap;
@@ -22,6 +23,14 @@ public class MainMenu extends JPanel {
     private static final Color BLUE = new Color(69, 126, 163);
     /** 現在のゲーム状態。 */
     private GameSession session;
+    /** 画面上の演出を統括する。 */
+    private final AnimationEffectManager animations = new AnimationEffectManager(this);
+    /** 直前に表示した所持金。 */
+    private int shownPlun;
+    /** 直前に表示した労働効率。 */
+    private int shownWorkEfficiency;
+    /** 初期表示で演出を省略するための状態。 */
+    private boolean statusInitialized;
     /** 日付表示。 */
     private final JLabel day = label("", 27);
     /** 所持プルン表示。 */
@@ -257,6 +266,8 @@ public class MainMenu extends JPanel {
 
     /** ゲームオーバー後に初期状態へ戻す。 */
     private void restart() {
+        animations.cancel();
+        statusInitialized = false;
         session = new GameSession();
         startHp = session.getHp();
         startPlun = session.getPlun();
@@ -273,12 +284,15 @@ public class MainMenu extends JPanel {
         travelerCard.setVisible(travelerAvailable);
         travelerGap.setVisible(travelerAvailable);
         day.setText("Day " + session.getDay());
-        hp.setMaximum(session.getMaxHp());
-        hp.setValue(session.getHp());
-        hp.setString(session.getHp() + " / " + session.getMaxHp());
-        hours.setMaximum(session.getDailyHours());
-        hours.setValue(session.getHours());
-        hours.setString(session.getHours() + " / " + session.getDailyHours());
+        animations.gauges().show(hp, session.getHp(), session.getMaxHp(), 20);
+        animations.gauges().show(hours, session.getHours(), session.getDailyHours(), 4);
+        if (statusInitialized) {
+            animations.texts().show(plun, session.getPlun() - shownPlun);
+            animations.texts().show(workEfficiency, session.getWorkEfficiency() - shownWorkEfficiency);
+        }
+        shownPlun = session.getPlun();
+        shownWorkEfficiency = session.getWorkEfficiency();
+        statusInitialized = true;
         plun.setText("プルン   " + session.getPlun());
         workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
@@ -294,6 +308,19 @@ public class MainMenu extends JPanel {
         });
         endDay.setEnabled(!session.isGameOver());
         restart.setVisible(session.isGameOver());
+    }
+
+    /** 画面を閉じた際にタイマーと古い演出を破棄する。 */
+    @Override
+    public void removeNotify() {
+        animations.cancel();
+        super.removeNotify();
+    }
+
+    @Override
+    protected void paintChildren(Graphics graphics) {
+        super.paintChildren(graphics);
+        animations.texts().paint(graphics);
     }
 
     /** 次の操作を受け付ける前に達成や予告を通知する。 */
