@@ -285,7 +285,7 @@ public class MainMenu extends JPanel {
         travelerGap.setVisible(travelerAvailable);
         day.setText("Day " + session.getDay());
         animations.gauges().show(hp, session.getHp(), session.getMaxHp(), 20);
-        animations.gauges().show(hours, session.getHours(), session.getDailyHours(), 4);
+        animations.gauges().show(hours, session.getHours(), session.getDailyHours(), 12);
         if (statusInitialized) {
             animations.texts().show(plun, session.getPlun() - shownPlun);
             animations.texts().show(workEfficiency, session.getWorkEfficiency() - shownWorkEfficiency);
