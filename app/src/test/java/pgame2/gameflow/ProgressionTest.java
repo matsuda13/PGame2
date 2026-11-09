@@ -18,7 +18,7 @@ class ProgressionTest {
     }
 
     @Test
-    void battleChanceBoundariesAndSurvivalFloor() {
+    void battleChanceBoundariesAndIndependentHp() {
         SimpleBattle battle = new SimpleBattle();
         assertTrue(battle.occurs(fixed(9), 0));
         assertFalse(battle.occurs(fixed(10), 0));
@@ -26,18 +26,41 @@ class ProgressionTest {
         assertFalse(battle.occurs(fixed(40), 30));
         assertFalse(battle.occurs(fixed(0), -100));
         assertTrue(battle.occurs(fixed(99), 200));
-        assertEquals(1, battle.remainingHp(5));
-        assertEquals(1, battle.remainingHp(1));
-        assertEquals(0, battle.remainingHp(0));
         GameSession game = new GameSession(fixed(0));
         game.execute(WORK);
-        assertEquals(70, game.getHp());
-        assertTrue(game.getBattleMessage().contains("10"));
+        assertEquals(80, game.getHp());
+        assertEquals(130, game.getPlun());
+        assertEquals(8, game.getHours());
+        var first = game.getPendingBattle();
+        assertNotNull(first);
+        assertEquals(100, first.playerHp());
+        assertFalse(game.shouldEndDay());
+        assertThrows(IllegalStateException.class, game::nextDay);
+        assertThrows(IllegalStateException.class, () -> game.execute(REST));
+        assertThrows(IllegalStateException.class, game::confirmBattleResult);
+        first.advanceTo(100);
+        assertEquals(80, game.getHp());
+        assertFalse(game.shouldEndDay());
+        assertThrows(IllegalStateException.class, game::nextDay);
+        game.confirmBattleResult();
+        assertNull(game.getPendingBattle());
+        assertTrue(game.getBattleMessage().contains("勝利"));
+        assertThrows(IllegalStateException.class, game::confirmBattleResult);
         game.execute(WORK);
+        assertNotSame(first, game.getPendingBattle());
+        assertEquals(100, game.getPendingBattle().playerHp());
+        game.getPendingBattle().advanceTo(100);
+        game.confirmBattleResult();
         game.execute(WORK);
+        assertFalse(game.shouldEndDay());
+        game.getPendingBattle().advanceTo(100);
+        game.confirmBattleResult();
+        assertTrue(game.shouldEndDay());
         game.nextDay();
+        game.changeHp(java.math.BigDecimal.valueOf(-20));
         game.execute(WORK);
         assertTrue(game.isGameOver());
+        assertNull(game.getPendingBattle());
         assertEquals("", game.getBattleMessage());
     }
 
