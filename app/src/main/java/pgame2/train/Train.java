@@ -2,8 +2,10 @@ package pgame2.train;
 
 /** 一種類の鍛錬の基本設定。イベント補正前の値を保持する。 */
 public final class Train {
-    /** 現在使用する鍛錬。バランス調整はここで行う。 */
-    public static final Train DEFAULT = new Train(3, 15, 0, 1);
+    /** 1時間あたりの基本HP消費。 */
+    public static final int HP_COST_PER_HOUR = 5;
+    /** 既存APIで使う3時間の労働効率鍛錬。 */
+    public static final Train DEFAULT = new Train(3, 3 * HP_COST_PER_HOUR, 0, 3 * TrainingAbility.WORK_EFFICIENCY.gainPerHour);
 
     /** 消費時間。 */
     private final int hours;

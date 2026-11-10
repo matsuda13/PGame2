@@ -11,8 +11,8 @@ public class SmallObjectives {
     public static final int ASSET_TARGET = 150;
     /** 調整前の労働回数。 */
     public static final int WORK_TARGET = 8;
-    /** 調整前の鍛錬回数。 */
-    public static final int TRAIN_TARGET = 5;
+    /** 調整前の鍛錬による能力獲得量。 */
+    public static final int TRAIN_TARGET = 15;
     /** 調整前の共通報酬。 */
     public static final int REWARD = 60;
     /** 先行実装する4種類。 */
@@ -31,8 +31,8 @@ public class SmallObjectives {
     private int target;
     /** 期間内の労働回数。 */
     private int workCount;
-    /** 期間内の鍛錬回数。 */
-    private int trainCount;
+    /** 期間内の鍛錬による能力獲得量。 */
+    private int trainingGain;
     /** 最後の結果表示。 */
     private String lastResult = "小目標はまだありません";
 
@@ -52,15 +52,15 @@ public class SmallObjectives {
             case GROW -> TRAIN_TARGET;
         };
         workCount = 0;
-        trainCount = 0;
+        trainingGain = 0;
         return true;
     }
 
     /** 成功したコマンドの回数のみを積算する。 */
-    public void recordAction(boolean work, boolean train) {
+    public void recordAction(boolean work) {
         if (active == null) return;
         if (work) workCount++;
-        if (train) trainCount++;
+
     }
 
     /** 維持型は期限日の終了時だけ判定し、他は即時達成を許す。 */
@@ -71,7 +71,7 @@ public class SmallObjectives {
             case REACH -> plun >= target;
             case HOLD -> due && plun >= target;
             case WORK -> workCount >= target;
-            case GROW -> trainCount >= target;
+            case GROW -> trainingGain >= target;
         };
         if (!success && !due) return Result.NONE;
         active = null;
@@ -79,6 +79,10 @@ public class SmallObjectives {
         return success ? Result.SUCCESS : Result.FAILURE;
     }
 
+    /** 鍛錬で実際に獲得した能力値を積算する。 */
+    public void recordTraining(int gain) {
+        if (active != null) trainingGain = Math.addExact(trainingGain, gain);
+    }
     /** 条件、現在の進捗、期限、報酬をまとめる。 */
     public String describe(int plun) {
         if (active == null) return lastResult;
@@ -86,7 +90,7 @@ public class SmallObjectives {
             case REACH -> "資産到達：" + plun + " / " + target + "プルン";
             case HOLD -> "資産維持：" + plun + " / " + target + "プルン（期限終了時）";
             case WORK -> "労働：" + workCount + " / " + target + "回";
-            case GROW -> "鍛錬：" + trainCount + " / " + target + "回";
+            case GROW -> "鍛錬で能力獲得：" + trainingGain + " / " + target;
         };
         return condition + "\n期限：Day " + deadline + " 終了時／報酬：" + REWARD + "プルン";
     }

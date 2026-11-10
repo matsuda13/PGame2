@@ -73,9 +73,9 @@ class ItemIntegrationTest {
         GameSession protein = game(3);
         protein.purchase(TEXTBOOK);
         advance(protein, 9);
-        decimal("3", protein.effects(TRAIN).workEfficiency());
+        decimal("7", protein.effects(TRAIN).workEfficiency());
         protein.execute(TRAIN);
-        assertEquals(3, protein.getWorkEfficiency());
+        assertEquals(7, protein.getWorkEfficiency());
     }
 
     @Test

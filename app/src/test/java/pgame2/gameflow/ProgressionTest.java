@@ -96,10 +96,10 @@ class ProgressionTest {
                 assertEquals(0, java.math.BigDecimal.valueOf(-26).compareTo(game.effects(WORK).hp()));
                 assertEquals(0, java.math.BigDecimal.valueOf(-15).compareTo(game.effects(TRAIN).hp()));
             }
-            if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(39).compareTo(game.effects(WORK).plun()));
+            if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(45).compareTo(game.effects(WORK).plun()));
             if (kind == 3) {
                 assertEquals(0, java.math.BigDecimal.valueOf(-30).compareTo(game.effects(TRAIN).hp()));
-                assertEquals(0, java.math.BigDecimal.valueOf(2).compareTo(game.effects(TRAIN).workEfficiency()));
+                assertEquals(0, java.math.BigDecimal.valueOf(6).compareTo(game.effects(TRAIN).workEfficiency()));
             }
             if (kind == 4) {
                 assertEquals(100, game.getHp());
@@ -116,8 +116,8 @@ class ProgressionTest {
             assertEquals(12, game.getDailyHours());
             assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(REST).hours()));
             assertEquals(0, java.math.BigDecimal.valueOf(-20).compareTo(game.effects(WORK).hp()));
-            assertEquals(0, java.math.BigDecimal.valueOf(kind == 4 ? 39 : 33).compareTo(game.effects(WORK).plun()));
-            assertEquals(0, java.math.BigDecimal.valueOf(1).compareTo(game.effects(TRAIN).workEfficiency()));
+            assertEquals(0, java.math.BigDecimal.valueOf(kind == 4 ? 57 : 39).compareTo(game.effects(WORK).plun()));
+            assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(TRAIN).workEfficiency()));
         }
     }
 
@@ -125,7 +125,7 @@ class ProgressionTest {
     void allObjectiveConditionsDeadlinesAndNoRepeat() {
         for (int kind = 0; kind < 4; kind++) {
             SmallObjectives goals = new SmallObjectives(fixed(kind));
-            goals.recordAction(true, true);
+            goals.recordAction(true); goals.recordTraining(1);
             assertFalse(goals.startDay(4, 100));
             assertTrue(goals.startDay(5, 100));
             assertEquals(20, goals.getDeadline());
@@ -139,10 +139,10 @@ class ProgressionTest {
                 assertEquals(NONE, goals.evaluate(20, 150, false));
                 assertEquals(SUCCESS, goals.evaluate(20, 150, true));
             } else {
-                int target = kind == 2 ? 8 : 5;
-                for (int i = 0; i < target - 1; i++) goals.recordAction(kind == 2, kind == 3);
+                int target = kind == 2 ? 8 : 15;
+                for (int i = 0; i < target - 1; i++) { goals.recordAction(kind == 2); goals.recordTraining(kind == 3 ? 1 : 0); }
                 assertEquals(NONE, goals.evaluate(6, 0, false));
-                goals.recordAction(kind == 2, kind == 3);
+                goals.recordAction(kind == 2); goals.recordTraining(kind == 3 ? 1 : 0);
                 assertEquals(SUCCESS, goals.evaluate(6, 0, false));
             }
             assertEquals(NONE, goals.evaluate(20, 999, true));
@@ -157,7 +157,7 @@ class ProgressionTest {
     }
 
     @Test
-    void trainingCountsActionsAndRewardIsGrantedOnlyOnce() {
+    void trainingCountsGainsAndRewardIsGrantedOnlyOnce() {
         GameSession game = new GameSession(fixed(3));
         // Day 14までの生活費を確保し、報酬と生活費を含む収支を検証する。
         game.changePlun(java.math.BigDecimal.valueOf(1000));
@@ -167,7 +167,7 @@ class ProgressionTest {
             game.execute(REST);
             game.nextDay();
         }
-        assertEquals(10, game.getWorkEfficiency());
+        assertEquals(30, game.getWorkEfficiency());
         assertEquals(510, game.getPlun()); // 初期100 + 準備1000 + 報酬60 - 13日分650。
         assertEquals(1, game.drainNotices().stream().filter(n -> n.contains("小目標達成")).count());
         assertTrue(game.drainNotices().isEmpty());

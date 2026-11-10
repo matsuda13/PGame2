@@ -13,6 +13,8 @@ import pgame2.gameflow.GameSession;
 import pgame2.gameflow.GameSession.Action;
 import pgame2.shop.ShopCatalog.Merchant;
 import pgame2.shop.ShopPanel;
+import pgame2.train.TrainingPanel;
+import pgame2.train.TrainingAbility;
 
 /** ステータス・行動選択・行動ログをまとめたメニュー。 */
 public class MainMenu extends JPanel {
@@ -175,7 +177,9 @@ public class MainMenu extends JPanel {
         effectLabels.put(action, effects);
         panel.add(effects, BorderLayout.CENTER);
         JButton execute = button("実行する");
-        execute.addActionListener(event -> execute(action));
+        execute.addActionListener(event -> {
+            if (action == Action.TRAIN) openTraining(); else execute(action);
+        });
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
         return panel;
@@ -223,7 +227,12 @@ public class MainMenu extends JPanel {
             session.confirmBattleResult();
             append(session.getBattleMessage());
         }
-        message.setText(action.title + "が終わった！");
+        actionCompleted(action.title);
+    }
+
+    /** 行動後の通知・演出・死亡判定・日終了をまとめる。 */
+    private void actionCompleted(String title) {
+        message.setText(title + "が終わった！");
         showNotices();
         refresh();
         if (session.isGameOver()) {
@@ -232,6 +241,34 @@ public class MainMenu extends JPanel {
         } else if (session.shouldEndDay()) {
             finishDay();
         }
+    }
+
+    /** 選択画面を閉じてから既存の行動後処理へ接続する。 */
+    protected void openTraining() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "鍛錬", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setContentPane(createTrainingPanel(dialog::dispose));
+        dialog.pack();
+        dialog.setMinimumSize(dialog.getSize());
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /** ダイアログとテストで共用する入力画面を作る。 */
+    protected TrainingPanel createTrainingPanel(Runnable close) {
+        return new TrainingPanel(session.getHours(), session::abilityValue,
+                (ability, duration) -> session.previewTraining(ability, duration).gain(),
+                duration -> session.getHp() - session.previewTraining(TrainingAbility.WORK_EFFICIENCY, duration).hpAfter(),
+                session::trainingUnavailableReason, (ability, duration) -> {
+                    int oldHp = session.getHp();
+                    int time = 8 + session.getDailyHours() - session.getHours();
+                    GameSession.TrainingPreview result = session.train(ability, duration);
+                    append(String.format("%02d:00  鍛錬（%s・%d時間）\nHP %s / %s +%d（%d → %d）\n",
+                            time, ability.title, duration, signed(session.getHp() - oldHp), ability.title,
+                            result.gain(), result.before(), result.after()));
+                    close.run();
+                    actionCompleted("鍛錬");
+                }, close);
     }
 
     /** 一日の収支を表示してから資源を引き継ぎ、翌日を始める。 */
@@ -304,6 +341,13 @@ public class MainMenu extends JPanel {
         workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
+            if (action == Action.TRAIN) {
+                effectLabels.get(action).setText("<html><body style='width:100px'>5つの能力から選択<br><br>1時間から鍛錬可能<br>基本成長 +1 / 時間<br>基本HP消費 5 / 時間</body></html>");
+                String reason = session.trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, 1);
+                button.setEnabled(reason.isEmpty());
+                button.setToolTipText(reason.isEmpty() ? action.description : reason);
+                return;
+            }
             GameSession.Effects effect = session.effects(action);
             effectLabels.get(action).setText("<html><body style='width:100px'>" + action.description
                     + "<br><br>時間 −" + effect.hours().stripTrailingZeros().toPlainString() + " 時間<br>HP " + signed(effect.hp())

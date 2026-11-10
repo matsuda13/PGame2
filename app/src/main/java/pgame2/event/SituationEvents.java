@@ -29,7 +29,7 @@ public class SituationEvents {
         BEASTS("魔獣活発化", "", modifier(BATTLE_CHANCE, points(30))),
         BOOM("好景気", "", modifier(WORK_PLUN_REWARD, percent(20))),
         PROTEIN("プロテインの雨", "", modifier(TRAIN_HP_COST, percent(100)),
-                modifier(TRAIN_WORK_EFFICIENCY_GAIN, percent(100))),
+                modifier(TRAIN_WORK_EFFICIENCY_GAIN, percent(100)), modifier(TRAIN_BATTLE_GAIN, percent(100))),
         SLEEP("春眠暁を覚えず", "毎朝体力全快", modifier(DAILY_HOURS, fixed(-1)),
                 modifier(REST_HOURS_COST, fixed(2)));
         /** 表示名。 */

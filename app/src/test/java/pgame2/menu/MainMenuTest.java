@@ -14,7 +14,12 @@ class MainMenuTest {
     void trainingUpdatesWorkRewardPreviewAndIncome() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             var game = new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
-            MainMenu menu = new MainMenu(game);
+            MainMenu menu = new MainMenu(game) {
+                @Override protected void openTraining() {
+                    var panel = createTrainingPanel(() -> { });
+                    collect(panel, JButton.class).stream().filter(b -> b.getText().equals("実行")).findFirst().orElseThrow().doClick();
+                }
+            };
             List<JButton> actions = collect(menu, JButton.class).stream()
                     .filter(button -> button.getText().equals("実行する")).toList();
             actions.get(3).doClick();
@@ -32,7 +37,7 @@ class MainMenuTest {
         SwingUtilities.invokeAndWait(() -> {
             pgame2.gameflow.GameSession game = new pgame2.gameflow.GameSession(new java.util.Random(0)) {
                 @Override public Effects effects(Action action) {
-                    if (action != Action.TRAIN) return super.effects(action);
+                    if (action != Action.REST) return super.effects(action);
                     return new Effects(new java.math.BigDecimal("3.5"), new java.math.BigDecimal("-19.5"),
                             new java.math.BigDecimal("2.5"), new java.math.BigDecimal("1.5"));
                 }
@@ -40,7 +45,7 @@ class MainMenuTest {
             MainMenu menu = new MainMenu(game);
             assertTrue(collect(menu, JLabel.class).stream().anyMatch(label -> label.getText().contains("HP -19.5")));
             collect(menu, JButton.class).stream().filter(button -> button.getText().equals("実行する"))
-                    .toList().get(3).doClick();
+                    .toList().get(1).doClick();
             assertEquals(80, game.getHp());
             assertEquals(8, game.getHours());
             assertEquals(102, game.getPlun());
