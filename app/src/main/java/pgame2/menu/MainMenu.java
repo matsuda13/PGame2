@@ -2,6 +2,7 @@ package pgame2.menu;
 
 import java.math.BigDecimal;
 import pgame2.common.Modifier;
+import pgame2.battle.BattleDialog;
 import pgame2.animation.AnimationEffectManager;
 
 import java.awt.*;
@@ -216,6 +217,12 @@ public class MainMenu extends JPanel {
         append(String.format("%02d:00  %s\nHP %s / プルン %s / 労働効率 %s\n",
                 time, action.title, signed(session.getHp() - oldHp), signed(plunChange), signed(workEfficiencyChange)));
         if (!session.getBattleMessage().isEmpty()) append(session.getBattleMessage());
+        if (session.getPendingBattle() != null) {
+            refresh();
+            new BattleDialog(SwingUtilities.getWindowAncestor(this), session.getPendingBattle()).setVisible(true);
+            session.confirmBattleResult();
+            append(session.getBattleMessage());
+        }
         message.setText(action.title + "が終わった！");
         showNotices();
         refresh();
@@ -306,7 +313,7 @@ public class MainMenu extends JPanel {
             button.setEnabled(reason.isEmpty());
             button.setToolTipText(reason.isEmpty() ? action.description : reason);
         });
-        endDay.setEnabled(!session.isGameOver());
+        endDay.setEnabled(!session.isGameOver() && session.getPendingBattle() == null);
         restart.setVisible(session.isGameOver());
     }
 

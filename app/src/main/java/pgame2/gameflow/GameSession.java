@@ -7,6 +7,8 @@ import static pgame2.effect.EffectTarget.*;
 import java.util.List;
 import java.util.random.RandomGenerator;
 import pgame2.battle.SimpleBattle;
+import pgame2.battle.AutoBattle;
+import pgame2.battle.BattleStats;
 import pgame2.event.SituationEvents;
 import pgame2.common.ModifierContext;
 import pgame2.effect.EffectTarget;
@@ -53,6 +55,10 @@ public class GameSession {
     private final RandomGenerator random;
     /** 簡易戦闘の処理。 */
     private final SimpleBattle battle = new SimpleBattle();
+    /** 主人公の戦闘能力。育成との接続は後続実装。 */
+    private final BattleStats battleStats = BattleStats.INITIAL;
+    /** 結果確認を待っている戦闘。 */
+    private AutoBattle pendingBattle;
     /** 状況変化の管理。 */
     private final SituationEvents events;
     /** 小目標の管理。 */
@@ -146,6 +152,7 @@ public class GameSession {
     /** 実行不可の理由。HPを消費し尽くす行動は死亡判定の対象として許可する。 */
     public String unavailableReason(Action action) {
         if (isGameOver()) return "ゲームオーバーです";
+        if (pendingBattle != null) return "戦闘結果を確認してください";
         Effects effect = effects(action);
         if (BigDecimal.valueOf(hours).compareTo(effect.hours()) < 0
                 && !(hours > 0 && items.allowsOvertime())) return "時間が足りません";
@@ -166,9 +173,8 @@ public class GameSession {
         battleMessage = "";
         if (isGameOver()) return;
         if (action == Action.WORK && battle.occurs(random, calculate(BATTLE_CHANCE, SimpleBattle.BASE_CHANCE))) {
-            int before = hp;
-            changeHp(BigDecimal.valueOf(battle.remainingHp(hp) - hp));
-            battleMessage = "帰り道で魔獣に襲われた！ なんとか逃げ切ったが、体力を" + (before - hp) + "消耗した。";
+            pendingBattle = new AutoBattle(battleStats, BattleStats.INITIAL);
+            battleMessage = "帰り道でトカゲ戦士に遭遇した！";
         }
         if (action == Action.WORK) items.workCompleted();
         if (action == Action.REST) applyRecovery(items.restCompleted());
@@ -178,7 +184,7 @@ public class GameSession {
 
     /** 死亡判定を優先し、実行可能な行動がなくなったら日を終了する。 */
     public boolean shouldEndDay() {
-        if (isGameOver()) return false;
+        if (isGameOver() || pendingBattle != null) return false;
         for (Action action : Action.values()) {
             if (unavailableReason(action).isEmpty()) return false;
         }
@@ -188,6 +194,7 @@ public class GameSession {
     /** 当日の期限判定後、翌日の状況と日次効果を適用する。 */
     public void nextDay() {
         if (isGameOver()) throw new IllegalStateException("ゲームオーバー後は翌日に進めません");
+        if (pendingBattle != null) throw new IllegalStateException("戦闘結果を確認してください");
         finishDay();
         if (isGameOver()) return;
         day++;
@@ -294,6 +301,7 @@ public class GameSession {
     /** 支払い直前にも購入可否を確認する。 */
     public String purchaseUnavailableReason(Item item) {
         if (isGameOver()) return "ゲームオーバーです";
+        if (pendingBattle != null) return "戦闘結果を確認してください";
         if (owns(item)) return "購入済みです";
         if (!shopItems(item.traveler()).contains(item)) return "この商品は販売されていません";
         if (plun < item.price()) return "プルンが足りません";
@@ -309,6 +317,17 @@ public class GameSession {
     }
     public String getEventDescription() { return events.describe(); }
     public String getObjectiveDescription() { return objectives.describe(plun); }
+    public BattleStats getBattleStats() { return battleStats; }
+    public AutoBattle getPendingBattle() { return pendingBattle; }
+
+    /** 勝敗の確認後に進行を解放する。通常HP・報酬には影響しない。 */
+    public void confirmBattleResult() {
+        if (pendingBattle == null || !pendingBattle.isFinished())
+            throw new IllegalStateException("戦闘が終了していません");
+        battleMessage = pendingBattle.playerWon() ? "トカゲ戦士との戦闘に勝利した！" : "トカゲ戦士との戦闘に敗北した。";
+        pendingBattle = null;
+    }
+
     public String getBattleMessage() { return battleMessage; }
 
     public int getDay() { return day; }
