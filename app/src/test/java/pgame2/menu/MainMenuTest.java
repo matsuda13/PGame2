@@ -17,7 +17,7 @@ class MainMenuTest {
             MainMenu menu = new MainMenu(game) {
                 @Override protected void openTraining() {
                     var panel = createTrainingPanel(() -> { });
-                    collect(panel, JButton.class).stream().filter(b -> b.getText().equals("実行")).findFirst().orElseThrow().doClick();
+                    collect(panel, JButton.class).stream().filter(b -> b.getText().equals("鍛錬する")).findFirst().orElseThrow().doClick();
                 }
             };
             List<JButton> actions = collect(menu, JButton.class).stream()

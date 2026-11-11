@@ -18,14 +18,14 @@ class TrainingPanelTest {
             TrainingPanel panel = new TrainingPanel(game.getHours(), game::abilityValue,
                     (a, h) -> game.previewTraining(a, h).gain(), h -> 5 * h,
                     game::trainingUnavailableReason, (a, h) -> game.train(a, h), closed::incrementAndGet);
-            collect(panel, JRadioButton.class).stream().filter(b -> b.getText().equals("素早さ")).findFirst().orElseThrow().doClick();
-            collect(panel, JSpinner.class).getFirst().setValue(3);
+            collect(panel, JRadioButton.class).stream().filter(b -> b.getAccessibleContext().getAccessibleName().equals("素早さ")).findFirst().orElseThrow().doClick();
+            collect(panel, JSlider.class).getFirst().setValue(3);
             assertTrue(collect(panel, JLabel.class).stream().anyMatch(l -> l.getText().equals("50 → 53")));
-            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("キャンセル")).findFirst().orElseThrow().doClick();
+            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("×")).findFirst().orElseThrow().doClick();
             assertEquals(1, closed.get());
             assertEquals(100, game.getHp());
             assertEquals(12, game.getHours());
-            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("実行")).findFirst().orElseThrow().doClick();
+            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("鍛錬する")).findFirst().orElseThrow().doClick();
             assertEquals(53, game.getBattleStats().speed());
             assertEquals(85, game.getHp());
             assertEquals(9, game.getHours());
