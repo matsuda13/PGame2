@@ -94,6 +94,25 @@ public final class TrainingPanel extends JPanel {
         timeHeader.add(durationLabel, BorderLayout.EAST); time.add(timeHeader, BorderLayout.NORTH);
         int maximum = Math.max(1, remainingHours);
         hours = new JSlider(1, maximum, 1);
+        hours.setUI(new javax.swing.plaf.metal.MetalSliderUI() {
+            /** トラックを押した位置へ移動してから、標準のドラッグ処理を開始する。 */
+            @Override protected TrackListener createTrackListener(JSlider slider) {
+                return new TrackListener() {
+                    @Override public void mousePressed(MouseEvent event) {
+                        calculateGeometry();
+                        if (slider.isEnabled() && SwingUtilities.isLeftMouseButton(event)
+                                && !thumbRect.contains(event.getPoint())) {
+                            slider.setValue(valueForXPosition(event.getX()));
+                            // 移動後のつまみ中央からドラッグを始め、標準の段階移動を防ぐ。
+                            event = new MouseEvent(slider, event.getID(), event.getWhen(), event.getModifiersEx(),
+                                    thumbRect.x + thumbRect.width / 2, thumbRect.y + thumbRect.height / 2,
+                                    event.getClickCount(), event.isPopupTrigger(), event.getButton());
+                        }
+                        super.mousePressed(event);
+                    }
+                };
+            }
+        });
         hours.setOpaque(false); hours.setForeground(BLUE);
         hours.setMinorTickSpacing(1); hours.setSnapToTicks(true); hours.setPaintTicks(true);
         hours.setEnabled(remainingHours > 0);
