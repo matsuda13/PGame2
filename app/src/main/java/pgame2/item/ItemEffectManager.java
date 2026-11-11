@@ -27,6 +27,12 @@ public final class ItemEffectManager {
             if (effect instanceof GameEffect.Numeric numeric) numeric.collect(target, state, context);
         }
     }
+    /** 実際に反映した鍛錬を通知する。 */
+    public void trainingCompleted(EffectTarget target, int day) {
+        for (ItemEffect effect : owned.values()) {
+            if (effect instanceof GameEffect.TrainingCompleted completed) completed.onTrainingCompleted(target, day);
+        }
+    }
     /** 成功した労働を通知する。 */
     public void workCompleted() {
         for (ItemEffect effect : owned.values()) {

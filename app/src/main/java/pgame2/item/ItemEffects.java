@@ -17,7 +17,7 @@ final class ItemEffects {
             case TOOLBOX -> new Bonus(WORK_PLUN_REWARD, Modifier.percent(10));
             case WORKWEAR -> new Bonus(WORK_HP_COST, Modifier.percent(-10));
             case BED -> new Bonus(REST_HP_RECOVERY, Modifier.percent(20));
-            case TEXTBOOK -> new Bonus(TRAIN_WORK_EFFICIENCY_GAIN, Modifier.fixed(1));
+            case TEXTBOOK -> new Textbook();
             case PIGGY_BANK -> new Bonus(LIVING_COST, Modifier.percent(-10));
             case BOTTLE -> new Bottle();
             case PILLOW -> new Pillow();
@@ -30,6 +30,17 @@ final class ItemEffects {
         };
     }
 
+    /** 当日最初の労働効率の鍛錬だけに加算する。 */
+    private static final class Textbook implements ItemEffect, GameEffect.Numeric, GameEffect.TrainingCompleted {
+        /** 最後に効果を適用した日。 */
+        private int lastUsedDay = -1;
+        public void collect(EffectTarget target, State state, ModifierContext context) {
+            if (target == TRAIN_WORK_EFFICIENCY_GAIN && lastUsedDay != state.day()) context.add(Modifier.fixed(1));
+        }
+        public void onTrainingCompleted(EffectTarget target, int day) {
+            if (target == TRAIN_WORK_EFFICIENCY_GAIN) lastUsedDay = day;
+        }
+    }
     /** 無条件の補正値を追加する共通効果。 */
     private record Bonus(EffectTarget target, Modifier modifier) implements ItemEffect, GameEffect.Numeric {
         public void collect(EffectTarget requested, State state, ModifierContext context) {

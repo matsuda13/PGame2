@@ -4,6 +4,7 @@ package pgame2.effect;
 public enum EffectTarget {
     WORK_HP_COST("労働のHP消費"), WORK_PLUN_REWARD("労働の報酬プルン"),
     TRAIN_HP_COST("鍛錬のHP消費"), TRAIN_WORK_EFFICIENCY_GAIN("鍛錬の獲得労働効率"),
+    TRAIN_BATTLE_GAIN("鍛錬の獲得戦闘能力"),
     REST_HOURS_COST("休息の消費時間"), REST_HP_RECOVERY("休息のHP回復"),
     DAILY_HOURS("1日の使用可能時間"), BATTLE_CHANCE("戦闘発生確率"), LIVING_COST("生活費");
 

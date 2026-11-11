@@ -17,6 +17,7 @@ import pgame2.item.Item;
 import pgame2.item.ItemEffectManager;
 import pgame2.objective.SmallObjectives;
 import pgame2.train.Train;
+import pgame2.train.TrainingAbility;
 import pgame2.work.Work;
 
 /** 数値はメニュー画像を参考にした調整前の試作用設定。 */
@@ -55,8 +56,8 @@ public class GameSession {
     private final RandomGenerator random;
     /** 簡易戦闘の処理。 */
     private final SimpleBattle battle = new SimpleBattle();
-    /** 主人公の戦闘能力。育成との接続は後続実装。 */
-    private final BattleStats battleStats = BattleStats.INITIAL;
+    /** 主人公の戦闘能力。鍛錬時に更新する。 */
+    private BattleStats battleStats = BattleStats.INITIAL;
     /** 結果確認を待っている戦闘。 */
     private AutoBattle pendingBattle;
     /** 状況変化の管理。 */
@@ -116,7 +117,7 @@ public class GameSession {
     }
 
     /** 効果に渡す読み取り専用の状態を確定する。 */
-    private GameEffect.State effectState() { return new GameEffect.State(hp, maxHp, plun); }
+    private GameEffect.State effectState() { return new GameEffect.State(hp, maxHp, plun, day); }
 
     /** コマンドを識別し、各機能の基本設定を共通の増減値として公開する。 */
     public enum Action {
@@ -124,7 +125,7 @@ public class GameSession {
                 -Work.DEFAULT.getHpCost(), Work.DEFAULT.getPlunReward(), Work.DEFAULT.getWorkEfficiencyGain()),
         REST("休息", "ゆっくり休んで体力を回復", 3, 25, 0, 0),
         HEAL("回復魔法", "プルンを使って体力を大きく回復", 1, 40, -15, 0),
-        TRAIN("鍛錬", "体に負荷をかけて労働効率を高める", Train.DEFAULT.getHours(),
+        TRAIN("鍛錬", "時間と育てる能力を選ぶ", Train.DEFAULT.getHours(),
                 -Train.DEFAULT.getHpCost(), Train.DEFAULT.getPlunReward(), Train.DEFAULT.getWorkEfficiencyGain());
         /** 表示する行動名。 */
         public final String title;
@@ -151,6 +152,7 @@ public class GameSession {
 
     /** 実行不可の理由。HPを消費し尽くす行動は死亡判定の対象として許可する。 */
     public String unavailableReason(Action action) {
+        if (action == Action.TRAIN) return trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, action.hours);
         if (isGameOver()) return "ゲームオーバーです";
         if (pendingBattle != null) return "戦闘結果を確認してください";
         Effects effect = effects(action);
@@ -162,6 +164,7 @@ public class GameSession {
 
     /** 実行条件を確認して資源へ反映する。 */
     public void execute(Action action) {
+        if (action == Action.TRAIN) { train(TrainingAbility.WORK_EFFICIENCY, action.hours); return; }
         String reason = unavailableReason(action);
         if (!reason.isEmpty()) throw new IllegalStateException(reason);
         Effects effect = effects(action);
@@ -178,13 +181,70 @@ public class GameSession {
         }
         if (action == Action.WORK) items.workCompleted();
         if (action == Action.REST) applyRecovery(items.restCompleted());
-        objectives.recordAction(action == Action.WORK, action == Action.TRAIN);
+        objectives.recordAction(action == Action.WORK);
         evaluateObjective(false);
+    }
+
+    /** 表示と実行で共有する鍛錬の最終結果。 */
+    public record TrainingPreview(TrainingAbility ability, int hours, int hpAfter, int before, int after) {
+        public int gain() { return after - before; }
+    }
+    /** 育成対象の現在値を返す。 */
+    public int abilityValue(TrainingAbility ability) {
+        return switch (ability) {
+            case WORK_EFFICIENCY -> workEfficiency;
+            case ATTACK -> battleStats.attack();
+            case DEFENSE -> battleStats.defense();
+            case TOUGHNESS -> battleStats.toughness();
+            case SPEED -> battleStats.speed();
+        };
+    }
+    /** 使用状態を変えずに、補正と端数処理後の結果を予測する。 */
+    public TrainingPreview previewTraining(TrainingAbility ability, int duration) {
+        java.util.Objects.requireNonNull(ability);
+        if (duration < 1 || duration > getDailyHours()) throw new IllegalArgumentException("鍛錬時間が範囲外です");
+        int before = abilityValue(ability);
+        int after = Modifier.floor(BigDecimal.valueOf(before).add(calculate(ability.effectTarget(), Math.multiplyExact(duration, ability.gainPerHour))));
+        int hpAfter = Modifier.floor(BigDecimal.valueOf(hp).subtract(calculate(TRAIN_HP_COST, Math.multiplyExact(duration, Train.HP_COST_PER_HOUR))).max(BigDecimal.ZERO));
+        return new TrainingPreview(ability, duration, hpAfter, before, after);
+    }
+    /** 砂時計の有無に関係なく、指定時間を確保する。 */
+    public String trainingUnavailableReason(TrainingAbility ability, int duration) {
+        if (ability == null) return "能力を選択してください";
+        if (isGameOver()) return "ゲームオーバーです";
+        if (pendingBattle != null) return "戦闘結果を確認してください";
+        if (duration < 1) return "1時間以上を指定してください";
+        if (duration > hours || duration > getDailyHours()) return "時間が足りません";
+        return "";
+    }
+    /** 能力と資源の反映後に使用日と小目標を更新する。 */
+    public TrainingPreview train(TrainingAbility ability, int duration) {
+        String reason = trainingUnavailableReason(ability, duration);
+        if (!reason.isEmpty()) throw new IllegalStateException(reason);
+        TrainingPreview result = previewTraining(ability, duration);
+        BattleStats next = switch (ability) {
+            case WORK_EFFICIENCY -> battleStats;
+            case ATTACK -> new BattleStats(result.after(), battleStats.defense(), battleStats.toughness(), battleStats.speed());
+            case DEFENSE -> new BattleStats(battleStats.attack(), result.after(), battleStats.toughness(), battleStats.speed());
+            case TOUGHNESS -> new BattleStats(battleStats.attack(), battleStats.defense(), result.after(), battleStats.speed());
+            case SPEED -> new BattleStats(battleStats.attack(), battleStats.defense(), battleStats.toughness(), result.after());
+        };
+        hours -= duration;
+        hp = result.hpAfter();
+        battleStats = next;
+        if (ability == TrainingAbility.WORK_EFFICIENCY) workEfficiency = result.after();
+        items.trainingCompleted(ability.effectTarget(), day);
+        battleMessage = "";
+        if (isGameOver()) return result;
+        objectives.recordTraining(result.gain());
+        evaluateObjective(false);
+        return result;
     }
 
     /** 死亡判定を優先し、実行可能な行動がなくなったら日を終了する。 */
     public boolean shouldEndDay() {
         if (isGameOver() || pendingBattle != null) return false;
+        if (trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, 1).isEmpty()) return false;
         for (Action action : Action.values()) {
             if (unavailableReason(action).isEmpty()) return false;
         }

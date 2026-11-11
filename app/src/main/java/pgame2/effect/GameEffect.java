@@ -5,7 +5,9 @@ import pgame2.common.ModifierContext;
 /** イベントとアイテムに共通する効果の親型。 */
 public interface GameEffect {
     /** 条件判定中に変更されないゲーム状態。 */
-    record State(int hp, int maxHp, int plun) { }
+    record State(int hp, int maxHp, int plun, int day) { }
+    /** 能力反映後に鍛錬対象と日付を通知する。 */
+    interface TrainingCompleted extends GameEffect { void onTrainingCompleted(EffectTarget target, int day); }
 
     /** 同一状態で条件判定した後にまとめて反映する回復・成長量。 */
     record Recovery(int hp, int maxHp) {

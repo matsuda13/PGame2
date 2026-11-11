@@ -19,7 +19,7 @@ class GameSessionTest {
         assertEquals(115, game.getPlun());
         game.execute(TRAIN);
         assertEquals(85, game.getHp());
-        assertEquals(1, game.getWorkEfficiency());
+        assertEquals(3, game.getWorkEfficiency());
         game.execute(REST);
         assertEquals(100, game.getHp());
         assertEquals(1, game.getHours());
@@ -41,7 +41,7 @@ class GameSessionTest {
         assertEquals(2, game.getDay());
         assertEquals(12, game.getHours());
         assertEquals(40, game.getHp());
-        assertEquals(4, game.getWorkEfficiency());
+        assertEquals(12, game.getWorkEfficiency());
         assertEquals(50, game.getPlun());
     }
 
