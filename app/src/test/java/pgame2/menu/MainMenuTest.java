@@ -109,6 +109,85 @@ class MainMenuTest {
         });
     }
 
+    /** 即時行動はカードと子部品へのホバーで予測し、離脱・実行時に解除する。 */
+    @Test void immediateActionsPreviewOnHoverWithoutChangingResources() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            game.changeHp(java.math.BigDecimal.valueOf(-60));
+            TestMenu menu = new TestMenu(game);
+            var gauges = collect(menu, PreviewGauge.class);
+            var actions = collect(menu, JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList();
+            Container card = actions.get(1).getParent();
+            card.setSize(165, 265);
+            JLabel text = collect(card, JLabel.class).getFirst();
+            mouse(text, java.awt.event.MouseEvent.MOUSE_ENTERED, 5, 5);
+            assertEquals("40 → 65 / 100", gauges.get(0).getString());
+            assertEquals("12 → 9 / 12", gauges.get(1).getString());
+            assertEquals(40, game.getHp());
+            mouse(text, java.awt.event.MouseEvent.MOUSE_EXITED, 20, 20);
+            assertTrue(gauges.get(0).getString().contains("→"));
+            mouse(card, java.awt.event.MouseEvent.MOUSE_EXITED, -1, -1);
+            assertEquals("40 / 100", gauges.get(0).getString());
+            mouse(actions.get(2), java.awt.event.MouseEvent.MOUSE_ENTERED, 5, 5);
+            assertEquals("40 → 80 / 100", gauges.get(0).getString());
+            assertEquals("12 → 11 / 12", gauges.get(1).getString());
+            mouse(actions.get(1), java.awt.event.MouseEvent.MOUSE_ENTERED, 5, 5);
+            actions.get(1).doClick();
+            assertEquals("65 / 100", gauges.get(0).getString());
+            assertEquals("9 / 12", gauges.get(1).getString());
+            menu.removeNotify();
+        });
+    }
+
+    /** 回復魔法は資金不足でもカードのホバーで予測と理由を表示する。 */
+    @Test void unavailableHealingStillShowsPreview() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            game.changePlun(java.math.BigDecimal.valueOf(-100));
+            game.changeHp(java.math.BigDecimal.valueOf(-10));
+            TestMenu menu = new TestMenu(game);
+            var heal = collect(menu, JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList().get(2);
+            assertFalse(heal.isEnabled());
+            mouse(heal.getParent(), java.awt.event.MouseEvent.MOUSE_ENTERED, 5, 5);
+            var gauge = collect(menu, PreviewGauge.class).getFirst();
+            assertEquals("90 → 100 / 100", gauge.getString());
+            assertEquals("プルンが足りません", gauge.getToolTipText());
+            menu.removeNotify();
+        });
+    }
+
+    /** 鍛錬の能力と時間に連動し、キャンセル・実行で予測を解除する。 */
+    @Test void trainingPreviewTracksSelectionDurationAndClose() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            TestMenu menu = new TestMenu(game);
+            var gauges = collect(menu, PreviewGauge.class);
+            var panel = menu.createTrainingPanel(() -> { });
+            assertEquals("100 → 95 / 100", gauges.get(0).getString());
+            collect(panel, JSlider.class).getFirst().setValue(4);
+            collect(panel, JRadioButton.class).getLast().doClick();
+            assertEquals("100 → 80 / 100", gauges.get(0).getString());
+            assertEquals("12 → 8 / 12", gauges.get(1).getString());
+            assertEquals(100, game.getHp());
+            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("×")).findFirst().orElseThrow().doClick();
+            assertEquals("100 / 100", gauges.get(0).getString());
+            panel = menu.createTrainingPanel(() -> { });
+            collect(panel, JSlider.class).getFirst().setValue(3);
+            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("鍛錬する")).findFirst().orElseThrow().doClick();
+            assertEquals("85 / 100", gauges.get(0).getString());
+            assertEquals("9 / 12", gauges.get(1).getString());
+            panel = menu.createTrainingPanel(() -> { });
+            panel.removeNotify();
+            assertEquals("85 / 100", gauges.get(0).getString());
+            menu.removeNotify();
+        });
+    }
+
+    /** 実ウィンドウなしでカーソルの出入りを通知する。 */
+    private static void mouse(Component component, int event, int x, int y) {
+        component.dispatchEvent(new java.awt.event.MouseEvent(component, event, System.currentTimeMillis(), 0, x, y, 0, false));
+    }
+
     /** 労働の結果から回復魔法の可否、資源、ログを更新する。 */
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {

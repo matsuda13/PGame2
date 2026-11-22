@@ -186,6 +186,26 @@ public class GameSession {
         evaluateObjective(false);
     }
 
+    /** 即時実行する行動の、日終了処理を含まない予測結果。 */
+    public record ActionPreview(int hpAfter, int maxHpAfter, int hoursAfter) { }
+
+    /** 補正、資源ごとの端数処理、休息後の回復を状態変更なしで再現する。 */
+    public ActionPreview previewAction(Action action) {
+        if (action != Action.REST && action != Action.HEAL)
+            throw new IllegalArgumentException("詳細画面から行動を選択してください");
+        Effects effect = effects(action);
+        BigDecimal cost = items.allowsOvertime() ? effect.hours().min(BigDecimal.valueOf(hours)) : effect.hours();
+        int afterHp = Modifier.floor(BigDecimal.valueOf(hp).add(effect.hp()).max(BigDecimal.ZERO).min(BigDecimal.valueOf(maxHp)));
+        int afterMax = maxHp;
+        if (action == Action.REST && afterHp > 0) {
+            GameEffect.Recovery recovery = items.restCompleted();
+            afterMax = Math.addExact(maxHp, recovery.maxHp());
+            afterHp = Modifier.floor(BigDecimal.valueOf((long) afterHp + recovery.maxHp() + recovery.hp())
+                    .max(BigDecimal.ZERO).min(BigDecimal.valueOf(afterMax)));
+        }
+        return new ActionPreview(afterHp, afterMax, Modifier.floor(BigDecimal.valueOf(hours).subtract(cost)));
+    }
+
     /** 当日の候補を読み取り専用で返す。 */
     public List<Work> getDailyWork() { return dailyWork; }
 

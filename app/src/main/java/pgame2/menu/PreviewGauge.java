@@ -9,6 +9,8 @@ public final class PreviewGauge extends JProgressBar {
     private Integer current;
     /** 上下限に収める前の予測値。 */
     private int after;
+    /** 予測後の上限。休息アイテムによる成長も表示する。 */
+    private int afterMaximum;
     /** 実行不可の理由。 */
     private String unavailable = "";
 
@@ -17,10 +19,16 @@ public final class PreviewGauge extends JProgressBar {
 
     /** ゲージモデルを変更せず、確定状態に基づく予測を設定する。 */
     public void showPreview(int current, int after, String unavailable) {
+        showPreview(current, after, getMaximum(), unavailable);
+    }
+
+    /** 上限が変わる行動もモデルを書き換えず表示する。 */
+    public void showPreview(int current, int after, int maximum, String unavailable) {
+        afterMaximum = maximum;
         this.current = current;
         this.after = after;
         this.unavailable = unavailable;
-        setToolTipText(unavailable.isEmpty() ? "労働直後の予測（日終了処理は含みません）" : unavailable);
+        setToolTipText(unavailable.isEmpty() ? "行動直後の予測（日終了処理は含みません）" : unavailable);
         repaint();
         if (getParent() != null) getParent().repaint();
     }
@@ -35,7 +43,7 @@ public final class PreviewGauge extends JProgressBar {
     }
 
     @Override public String getString() {
-        return current == null ? super.getString() : current + " → " + Math.max(0, after) + " / " + getMaximum();
+        return current == null ? super.getString() : current + " → " + Math.max(0, after) + " / " + (afterMaximum == getMaximum() ? String.valueOf(getMaximum()) : getMaximum() + "→" + afterMaximum);
     }
 
     @Override protected void paintComponent(Graphics graphics) {
@@ -52,7 +60,7 @@ public final class PreviewGauge extends JProgressBar {
             g.fillRect(x, y, width, height);
             g.setColor(getForeground());
             g.fillRect(x, y, beforeX, height);
-            g.setColor(unavailable.isEmpty() ? new Color(255, 255, 255, 155) : new Color(220, 65, 65, 170));
+            g.setColor(unavailable.isEmpty() ? (after > current ? new Color(70, 170, 110, 150) : new Color(255, 255, 255, 155)) : new Color(220, 65, 65, 170));
             int left = x + Math.min(beforeX, afterX), span = Math.abs(beforeX - afterX);
             g.fillRect(left, y, span, height);
             Shape clip = g.getClip();

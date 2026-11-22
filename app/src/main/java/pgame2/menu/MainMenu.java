@@ -25,6 +25,8 @@ public class MainMenu extends JPanel {
     private static final Color INK = new Color(41, 53, 65);
     /** 操作ボタンの色。 */
     private static final Color BLUE = new Color(69, 126, 163);
+    /** カーソルが乗っている即時実行コマンド。 */
+    private Action hoveredAction;
     /** 現在のゲーム状態。 */
     private GameSession session;
     /** 画面上の演出を統括する。 */
@@ -159,6 +161,8 @@ public class MainMenu extends JPanel {
                 BorderLayout.CENTER);
         JButton openShop = button("実行する");
         openShop.addActionListener(event -> {
+            hoveredAction = null;
+            clearActionPreview();
             int before = session.getPlun();
             ShopPanel.open(this, merchant, session);
             if (before != session.getPlun()) {
@@ -179,13 +183,45 @@ public class MainMenu extends JPanel {
         panel.add(effects, BorderLayout.CENTER);
         JButton execute = button("実行する");
         execute.addActionListener(event -> {
+            hoveredAction = null;
+            clearActionPreview();
             if (action == Action.TRAIN) openTraining();
             else if (action == Action.WORK) openWork();
             else execute(action);
         });
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
+        if (action == Action.REST || action == Action.HEAL) installActionHover(panel, panel, action);
         return panel;
+    }
+
+    /** 子部品間の移動では消さず、カードを離れた時だけ予測を解除する。 */
+    private void installActionHover(Component component, JPanel card, Action action) {
+        component.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent event) {
+                hoveredAction = action;
+                showActionPreview(action);
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent event) {
+                Point point = SwingUtilities.convertPoint(component, event.getPoint(), card);
+                if (!card.contains(point) && hoveredAction == action) {
+                    hoveredAction = null;
+                    clearActionPreview();
+                }
+            }
+        });
+        if (component instanceof Container parent)
+            for (Component child : parent.getComponents()) installActionHover(child, card, action);
+    }
+
+    /** 即時行動の補正済み予測を、ゲーム状態を変えずに表示する。 */
+    private void showActionPreview(Action action) {
+        if (session.isGameOver() || session.getPendingBattle() != null) { clearActionPreview(); return; }
+        var preview = session.previewAction(action);
+        String reason = session.unavailableReason(action);
+        hp.showPreview(session.getHp(), preview.hpAfter(), preview.maxHpAfter(), reason);
+        hours.showPreview(session.getHours(), preview.hoursAfter(), reason);
+        repaint();
     }
 
     /** スクロール可能なログと進行操作を右側へ配置する。 */
@@ -287,7 +323,7 @@ public class MainMenu extends JPanel {
                             + "<br>" + battleResult + "（戦闘による通常HP損失なし）</html>";
                 }, close);
         panel.setSelectionListener(work -> {
-            if (work == null || session.isGameOver()) { clearWorkPreview(); return; }
+            if (work == null || session.isGameOver()) { clearActionPreview(); return; }
             var preview = session.previewWork(work);
             String reason = session.workUnavailableReason(work);
             hp.showPreview(session.getHp(), session.getHp() - preview.hpCost(), reason);
@@ -297,8 +333,8 @@ public class MainMenu extends JPanel {
         return panel;
     }
 
-    /** 労働の予測表示だけを解除する。 */
-    private void clearWorkPreview() {
+    /** 行動の予測表示だけを解除する。 */
+    private void clearActionPreview() {
         hp.clearPreview();
         hours.clearPreview();
         repaint();
@@ -317,7 +353,7 @@ public class MainMenu extends JPanel {
 
     /** ダイアログとテストで共用する入力画面を作る。 */
     protected TrainingPanel createTrainingPanel(Runnable close) {
-        return new TrainingPanel(session.getHours(), session::abilityValue,
+        TrainingPanel panel = new TrainingPanel(session.getHours(), session::abilityValue,
                 (ability, duration) -> session.previewTraining(ability, duration).gain(),
                 duration -> session.getHp() - session.previewTraining(TrainingAbility.WORK_EFFICIENCY, duration).hpAfter(),
                 session::trainingUnavailableReason, (ability, duration) -> {
@@ -329,11 +365,22 @@ public class MainMenu extends JPanel {
                             result.gain(), result.before(), result.after()));
                     close.run();
                     actionCompleted("鍛錬");
-                }, close);
+                }, () -> { clearActionPreview(); close.run(); });
+        panel.setSelectionListener((ability, duration) -> {
+            if (ability == null || session.isGameOver()) { clearActionPreview(); return; }
+            var preview = session.previewTraining(ability, duration);
+            String reason = session.trainingUnavailableReason(ability, duration);
+            hp.showPreview(session.getHp(), preview.hpAfter(), reason);
+            hours.showPreview(session.getHours(), session.getHours() - duration, reason);
+            repaint();
+        });
+        return panel;
     }
 
     /** 一日の収支を表示してから資源を引き継ぎ、翌日を始める。 */
     private void finishDay() {
+        hoveredAction = null;
+        clearActionPreview();
         String summary = "Day " + session.getDay() + " が終わりました\n\n"
                 + "HP " + startHp + " → " + session.getHp() + "\n"
                 + "プルン " + startPlun + " → " + session.getPlun() + "\n"
@@ -371,7 +418,8 @@ public class MainMenu extends JPanel {
 
     /** ゲームオーバー後に初期状態へ戻す。 */
     private void restart() {
-        clearWorkPreview();
+        hoveredAction = null;
+        clearActionPreview();
         animations.cancel();
         statusInitialized = false;
         session = new GameSession();
@@ -426,12 +474,13 @@ public class MainMenu extends JPanel {
         });
         endDay.setEnabled(!session.isGameOver() && session.getPendingBattle() == null);
         restart.setVisible(session.isGameOver());
+        if (hoveredAction != null) showActionPreview(hoveredAction);
     }
 
     /** 画面を閉じた際にタイマーと古い演出を破棄する。 */
     @Override
     public void removeNotify() {
-        clearWorkPreview();
+        clearActionPreview();
         animations.cancel();
         super.removeNotify();
     }

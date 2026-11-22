@@ -234,6 +234,8 @@ class ItemIntegrationTest {
         GameSession game = game(0, HOURGLASS);
         game.purchase(HOURGLASS);
         game.changeHours(BigDecimal.valueOf(-11));
+        assertEquals(0, game.previewAction(REST).hoursAfter());
+        assertEquals(1, game.getHours());
         assertEquals("", game.unavailableReason(WORK));
         assertFalse(game.shouldEndDay());
         game.work(game.getDailyWork().getFirst());

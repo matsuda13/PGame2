@@ -34,18 +34,21 @@ class PreviewGaugeTest {
     @Test void rendersPreviewAndShortageWithinBounds() throws Exception {
         BufferedImage[] result = new BufferedImage[1];
         SwingUtilities.invokeAndWait(() -> {
-            PreviewGauge hp = new PreviewGauge(100), hours = new PreviewGauge(12), blocked = new PreviewGauge(100);
+            PreviewGauge hp = new PreviewGauge(100), hours = new PreviewGauge(12), blocked = new PreviewGauge(100),
+                    recovery = new PreviewGauge(100), growth = new PreviewGauge(100);
             JPanel surface = new JPanel(null) {
                 @Override protected void paintChildren(Graphics graphics) {
                     super.paintChildren(graphics);
                     hp.paintDelta(graphics, this);
                     hours.paintDelta(graphics, this);
                     blocked.paintDelta(graphics, this);
+                    recovery.paintDelta(graphics, this);
+                    growth.paintDelta(graphics, this);
                 }
             };
             surface.setBackground(new Color(248, 242, 225));
-            surface.setSize(250, 270);
-            PreviewGauge[] gauges = {hp, hours, blocked};
+            surface.setSize(250, 430);
+            PreviewGauge[] gauges = {hp, hours, blocked, recovery, growth};
             for (int i = 0; i < gauges.length; i++) {
                 PreviewGauge gauge = gauges[i];
                 gauge.setBounds(25, 40 + i * 80, 180, 26);
@@ -57,11 +60,15 @@ class PreviewGaugeTest {
             hp.setValue(35);
             hours.setValue(8);
             blocked.setValue(10);
+            recovery.setValue(40);
+            recovery.showPreview(40, 65, "");
+            growth.setValue(90);
+            growth.showPreview(90, 101, 101, "");
             hp.showPreview(35, 10, "");
             hours.showPreview(8, 4, "");
             blocked.showPreview(10, -15, "体力が足りません");
             assertEquals("10 → 0 / 100", blocked.getString());
-            result[0] = new BufferedImage(250, 270, BufferedImage.TYPE_INT_RGB);
+            result[0] = new BufferedImage(250, 430, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = result[0].createGraphics();
             try { surface.printAll(g); } finally { g.dispose(); }
         });
