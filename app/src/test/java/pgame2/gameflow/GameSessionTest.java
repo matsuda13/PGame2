@@ -7,12 +7,12 @@ import static pgame2.gameflow.GameSession.Action.*;
 class GameSessionTest {
     @Test
     void actionsConsumeResourcesAndHealingRespectsCap() {
-        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         assertEquals(100, game.getPlun());
         assertTrue(game.unavailableReason(HEAL).isEmpty());
         assertEquals(12, game.getHours());
-        game.execute(WORK);
-        assertEquals(80, game.getHp());
+        game.work(game.getDailyWork().getFirst());
+        assertEquals(75, game.getHp());
         assertEquals(130, game.getPlun());
         game.execute(HEAL);
         assertEquals(100, game.getHp());
@@ -30,13 +30,13 @@ class GameSessionTest {
 
     @Test
     void noAffordableActionEndsDayAndResourcesCarryOver() {
-        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.execute(TRAIN);
         game.execute(TRAIN);
         game.execute(TRAIN);
         game.execute(TRAIN);
         assertTrue(game.shouldEndDay());
-        assertThrows(IllegalStateException.class, () -> game.execute(WORK));
+        assertThrows(IllegalStateException.class, () -> game.work(game.getDailyWork().getFirst()));
         game.nextDay();
         assertEquals(2, game.getDay());
         assertEquals(12, game.getHours());
@@ -48,7 +48,7 @@ class GameSessionTest {
     /** 回復魔法は15プルンちょうどで実行でき、不足時には資源を変更しない。 */
     @Test
     void healingRequiresEnoughPlun() {
-        GameSession game = new GameSession(new java.util.Random(0));
+        GameSession game = new GameSession(new java.util.Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(java.math.BigDecimal.valueOf(-86));
         assertEquals("プルンが足りません", game.unavailableReason(HEAL));
         assertThrows(IllegalStateException.class, () -> game.execute(HEAL));
@@ -65,7 +65,7 @@ class GameSessionTest {
     @Test
     void livingCostIsChargedAtDayEndWithShortagePenalty() {
         for (int balance : new int[] {0, 49, 50, 51}) {
-            GameSession game = new GameSession(new java.util.Random(0));
+            GameSession game = new GameSession(new java.util.Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
             game.changePlun(java.math.BigDecimal.valueOf(balance - game.getPlun()));
             game.nextDay();
             assertEquals(Math.max(0, balance - 50), game.getPlun(), "所持金 " + balance);
@@ -78,7 +78,7 @@ class GameSessionTest {
     /** 生活費不足でHPを使い切った場合も、その後の行動と翌日移行を禁止する。 */
     @Test
     void livingCostShortageCanEndGame() {
-        GameSession game = new GameSession(new java.util.Random(0));
+        GameSession game = new GameSession(new java.util.Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(java.math.BigDecimal.valueOf(-100));
         game.changeHp(java.math.BigDecimal.valueOf(-50));
         game.nextDay();
@@ -91,9 +91,9 @@ class GameSessionTest {
 
     @Test
     void timeShortageBlocksLongActionsButAllowsMagic() {
-        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
-        game.execute(WORK);
-        game.execute(WORK);
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
+        game.work(game.getDailyWork().getFirst());
+        game.work(game.getDailyWork().getFirst());
         game.execute(REST);
         assertEquals(1, game.getHours());
         assertFalse(game.unavailableReason(WORK).isEmpty());
@@ -103,13 +103,10 @@ class GameSessionTest {
 
     @Test
     void deathTakesPriorityOverDayTransition() {
-        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
-        game.execute(WORK);
-        game.execute(WORK);
-        game.execute(WORK);
-        game.nextDay();
-        game.execute(WORK);
-        game.execute(WORK);
+        GameSession game = new GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
+        // 労働による確定死亡は禁止。休息以外のHP消費で死亡した場合の優先順位を検証する。
+        game.changeHp(java.math.BigDecimal.valueOf(-85));
+        game.execute(TRAIN);
         assertTrue(game.isGameOver());
         assertFalse(game.shouldEndDay());
         assertThrows(IllegalStateException.class, game::nextDay);

@@ -15,6 +15,7 @@ import pgame2.shop.ShopCatalog.Merchant;
 import pgame2.shop.ShopPanel;
 import pgame2.train.TrainingPanel;
 import pgame2.train.TrainingAbility;
+import pgame2.work.WorkPanel;
 
 /** ステータス・行動選択・行動ログをまとめたメニュー。 */
 public class MainMenu extends JPanel {
@@ -178,7 +179,9 @@ public class MainMenu extends JPanel {
         panel.add(effects, BorderLayout.CENTER);
         JButton execute = button("実行する");
         execute.addActionListener(event -> {
-            if (action == Action.TRAIN) openTraining(); else execute(action);
+            if (action == Action.TRAIN) openTraining();
+            else if (action == Action.WORK) openWork();
+            else execute(action);
         });
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
@@ -241,6 +244,48 @@ public class MainMenu extends JPanel {
         } else if (session.shouldEndDay()) {
             finishDay();
         }
+    }
+
+    /** 結果を残して繰り返し操作できる労働画面を開く。 */
+    protected void openWork() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "労働", Dialog.ModalityType.APPLICATION_MODAL);
+        WorkPanel panel = createWorkPanel(dialog::dispose);
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent event) { panel.requestClose(); }
+        });
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setMinimumSize(dialog.getSize());
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /** 労働結果を記録し、戦闘確認後に既存の日終了・死亡判定へ接続する。 */
+    protected WorkPanel createWorkPanel(Runnable close) {
+        return new WorkPanel(() -> new WorkPanel.State(session.getDay(), session.getHours(), session.getHp(),
+                session.getMaxHp(), session.getPlun(), session.getDailyWork()), work -> {
+                    var value = session.previewWork(work);
+                    return new WorkPanel.Preview(value.hours(), value.hpCost(), value.reward(), value.battleChance());
+                }, session::workUnavailableReason, work -> {
+                    int time = 8 + session.getDailyHours() - session.getHours();
+                    var result = session.work(work);
+                    append(String.format("%02d:00  労働（%s）\nHP -%d / プルン +%d / 時間 -%d\n",
+                            time, work.name(), result.hpCost(), result.reward(), result.hours()));
+                    if (session.getPendingBattle() != null) {
+                        append(session.getBattleMessage());
+                        refresh();
+                        new BattleDialog(SwingUtilities.getWindowAncestor(this), session.getPendingBattle()).setVisible(true);
+                        session.confirmBattleResult();
+                        append(session.getBattleMessage());
+                    }
+                    String battleResult = result.battleOccurred() ? session.getBattleMessage() : "戦闘なし";
+                    actionCompleted(work.name());
+                    if (session.isGameOver()) close.run();
+                    return "<html>Day " + result.day() + "  " + work.name() + " 完了<br>獲得 " + result.reward()
+                            + " PLN / 消費 " + result.hours() + "時間 / HP損失 " + result.hpCost()
+                            + "<br>" + battleResult + "（戦闘による通常HP損失なし）</html>";
+                }, close);
     }
 
     /** 選択画面を閉じてから既存の行動後処理へ接続する。 */
@@ -341,6 +386,11 @@ public class MainMenu extends JPanel {
         workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
+            if (action == Action.WORK) {
+                effectLabels.get(action).setText("<html><body style='width:100px'>本日の2種類から選択<br><br>時間・体力・報酬を比較して働く</body></html>");
+                button.setEnabled(!session.isGameOver() && session.getPendingBattle() == null);
+                return;
+            }
             if (action == Action.TRAIN) {
                 effectLabels.get(action).setText("<html><body style='width:100px'>5つの能力から選択<br><br>1時間から鍛錬可能<br>基本成長 +1 / 時間<br>基本HP消費 5 / 時間</body></html>");
                 String reason = session.trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, 1);

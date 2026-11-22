@@ -9,33 +9,33 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MainMenuTest {
-    /** 鍛錬後に労働報酬の表示と獲得額がともに更新される。 */
+    /** 労働画面を開くだけでは消費せず、鍛錬後の補正を詳細と実行に反映する。 */
     @Test
     void trainingUpdatesWorkRewardPreviewAndIncome() throws Exception {
+        var game = fixedGame();
+        TestMenu[] menu = new TestMenu[1];
         SwingUtilities.invokeAndWait(() -> {
-            var game = new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
-            MainMenu menu = new MainMenu(game) {
-                @Override protected void openTraining() {
-                    var panel = createTrainingPanel(() -> { });
-                    collect(panel, JButton.class).stream().filter(b -> b.getText().equals("鍛錬する")).findFirst().orElseThrow().doClick();
-                }
-            };
-            List<JButton> actions = collect(menu, JButton.class).stream()
-                    .filter(button -> button.getText().equals("実行する")).toList();
+            menu[0] = new TestMenu(game);
+            var actions = collect(menu[0], JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList();
             actions.get(3).doClick();
             assertEquals(1, game.getWorkEfficiency());
-            assertTrue(collect(menu, JLabel.class).stream()
-                    .anyMatch(label -> label.getText().contains("プルン +33")));
             actions.get(0).doClick();
+            assertEquals(100, game.getPlun());
+            collect(menu[0].workPanel, JToggleButton.class).getFirst().doClick();
+            assertTrue(collect(menu[0].workPanel, JLabel.class).stream().anyMatch(l -> l.getText().contains("報酬 33")));
+            start(menu[0].workPanel).doClick();
+        });
+        SwingUtilities.invokeAndWait(() -> {
             assertEquals(133, game.getPlun());
-            assertTrue(collect(menu, JTextArea.class).getFirst().getText().contains("プルン +33"));
+            assertTrue(collect(menu[0], JTextArea.class).getFirst().getText().contains("プルン +33"));
+            menu[0].removeNotify();
         });
     }
 
     @Test
     void fractionalEffectsAreAppliedBeforeRoundingAndLoggedAsActualChanges() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            pgame2.gameflow.GameSession game = new pgame2.gameflow.GameSession(new java.util.Random(0)) {
+            pgame2.gameflow.GameSession game = new pgame2.gameflow.GameSession(new java.util.Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } }) {
                 @Override public Effects effects(Action action) {
                     if (action != Action.REST) return super.effects(action);
                     return new Effects(new java.math.BigDecimal("3.5"), new java.math.BigDecimal("-19.5"),
@@ -55,38 +55,64 @@ class MainMenuTest {
         });
     }
 
-    /** ボタン操作によって資源表示・ログ・実行可否が連動することを確認する。 */
+    /** 労働の結果から回復魔法の可否、資源、ログを更新する。 */
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {
+        var game = fixedGame();
+        game.changePlun(java.math.BigDecimal.valueOf(-100));
+        TestMenu[] menu = new TestMenu[1];
         SwingUtilities.invokeAndWait(() -> {
-            var game = new pgame2.gameflow.GameSession(new java.util.Random() { @Override public int nextInt(int bound) { return bound - 1; } });
-            // 資金不足から労働で回復魔法を解禁する状態を明示的に用意する。
-            game.changePlun(java.math.BigDecimal.valueOf(-100));
-            MainMenu menu = new MainMenu(game);
-            List<JButton> actions = new ArrayList<>();
-            collect(menu, JButton.class).stream()
-                    .filter(button -> button.getText().equals("実行する")).forEach(actions::add);
+            menu[0] = new TestMenu(game);
+            var actions = collect(menu[0], JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList();
             assertEquals(6, actions.size());
             assertFalse(actions.get(2).isEnabled());
             actions.get(0).doClick();
-            assertTrue(actions.get(2).isEnabled());
-            assertTrue(collect(menu, JLabel.class).stream()
-                    .anyMatch(label -> label.getText().equals("プルン   30")));
-            actions.get(2).doClick();
-            JTextArea log = collect(menu, JTextArea.class).getFirst();
-            assertTrue(log.getText().contains("08:00  労働"));
-            assertTrue(log.getText().contains("12:00  回復魔法"));
-            assertTrue(log.getText().contains("HP +20"));
-            assertTrue(collect(menu, JProgressBar.class).stream()
-                    .anyMatch(bar -> bar.getString().equals("7 / 12")));
+            collect(menu[0].workPanel, JToggleButton.class).getFirst().doClick();
+            start(menu[0].workPanel).doClick();
         });
+        SwingUtilities.invokeAndWait(() -> {
+            var actions = collect(menu[0], JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList();
+            assertTrue(actions.get(2).isEnabled());
+            assertEquals(30, game.getPlun());
+            actions.get(2).doClick();
+            String log = collect(menu[0], JTextArea.class).getFirst().getText();
+            assertTrue(log.contains("08:00  労働"));
+            assertTrue(log.contains("12:00  回復魔法"));
+            assertTrue(log.contains("HP +25"));
+            assertEquals(7, game.getHours());
+            menu[0].removeNotify();
+        });
+    }
+
+    /** 襲撃なし・荷役候補で画面連携を検証する。 */
+    private static pgame2.gameflow.GameSession fixedGame() {
+        return new pgame2.gameflow.GameSession(new java.util.Random() {
+            @Override public int nextInt(int bound) { return bound - 1; }
+        }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
+    }
+
+    /** ネイティブダイアログの代わりに入力画面を保持する。 */
+    private static class TestMenu extends MainMenu {
+        /** 開いた労働画面。 */
+        private pgame2.work.WorkPanel workPanel;
+        TestMenu(pgame2.gameflow.GameSession game) { super(game); }
+        @Override protected void openWork() { workPanel = createWorkPanel(() -> { }); }
+        @Override protected void openTraining() {
+            var panel = createTrainingPanel(() -> { });
+            collect(panel, JButton.class).stream().filter(b -> b.getText().equals("鍛錬する")).findFirst().orElseThrow().doClick();
+        }
+    }
+
+    /** 労働開始ボタンを取得する。 */
+    private static JButton start(Container panel) {
+        return collect(panel, JButton.class).stream().filter(b -> b.getText().equals("労働開始")).findFirst().orElseThrow();
     }
 
     /** 日付変更後の更新でも、初日と10の倍数の日だけショップの隣に行商人を表示する。 */
     @Test
     void travelerAppearsOnlyOnFirstDayAndMultiplesOfTen() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            var game = new pgame2.gameflow.GameSession(new java.util.Random(0));
+            var game = new pgame2.gameflow.GameSession(new java.util.Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
             game.changePlun(java.math.BigDecimal.valueOf(10000));
             MainMenu menu = new MainMenu(game);
             Container traveler = collect(menu, JLabel.class).stream()

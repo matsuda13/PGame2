@@ -14,7 +14,7 @@ class TrainingTest {
     private GameSession game(int event) {
         GameSession game = new GameSession(new Random() {
             @Override public int nextInt(int bound) { return Math.min(event, bound - 1); }
-        });
+        }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(BigDecimal.valueOf(10000));
         return game;
     }
@@ -99,7 +99,7 @@ class TrainingTest {
     @Test void battleUsesTrainedStatsAndBlocksFurtherTraining() {
         GameSession game = game(0);
         for (TrainingAbility ability : TrainingAbility.values()) game.train(ability, 1);
-        game.execute(GameSession.Action.WORK);
+        game.work(game.getDailyWork().getFirst());
         var battle = game.getPendingBattle();
         assertNotNull(battle);
         assertEquals(new BattleStats(11, 11, 101, 51), battle.player());

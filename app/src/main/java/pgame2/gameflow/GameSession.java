@@ -52,8 +52,13 @@ public class GameSession {
     /** 直近の日終了時に生活費不足があったか。 */
     private boolean lastLivingCostShortage;
 
+    /** 当日の候補。翌朝まで変更しない。 */
+    private List<Work> dailyWork = List.of();
+
     /** 襲撃の抽選元。 */
     private final RandomGenerator random;
+    /** 日替わり労働の抽選元。検証時には他の抽選から分離できる。 */
+    private final RandomGenerator workRandom;
     /** 簡易戦闘の処理。 */
     private final SimpleBattle battle = new SimpleBattle();
     /** 主人公の戦闘能力。鍛錬時に更新する。 */
@@ -72,8 +77,12 @@ public class GameSession {
     public GameSession() { this(RandomGenerator.getDefault()); }
 
     /** 抽選元を注入して再現可能な進行を作る。 */
-    public GameSession(RandomGenerator random) {
+    public GameSession(RandomGenerator random) { this(random, random); }
+
+    /** 労働候補の抽選を独立して再現するための注入口。 */
+    public GameSession(RandomGenerator random, RandomGenerator workRandom) {
         this.random = random;
+        this.workRandom = workRandom;
         plun = 100;
         events = new SituationEvents(random);
         objectives = new SmallObjectives(random);
@@ -89,12 +98,7 @@ public class GameSession {
         BigDecimal income = BigDecimal.valueOf(action.plun);
         BigDecimal growth = BigDecimal.valueOf(action.workEfficiency);
         BigDecimal duration = BigDecimal.valueOf(action.hours);
-        if (action == Action.WORK) {
-            hpChange = calculate(WORK_HP_COST, -action.hp).negate();
-            income = calculate(WORK_PLUN_REWARD, action.plun,
-                    new Modifier(Modifier.Type.PERCENT, BigDecimal.valueOf(workEfficiency)
-                            .multiply(BigDecimal.valueOf(Work.EFFICIENCY_REWARD_PERCENT))));
-        }
+        if (action == Action.WORK) return workEffects(dailyWork.getFirst());
         if (action == Action.TRAIN) {
             hpChange = calculate(TRAIN_HP_COST, -action.hp).negate();
             growth = calculate(TRAIN_WORK_EFFICIENCY_GAIN, action.workEfficiency);
@@ -121,8 +125,7 @@ public class GameSession {
 
     /** コマンドを識別し、各機能の基本設定を共通の増減値として公開する。 */
     public enum Action {
-        WORK("労働", "体を使ってプルンを稼ぐ", Work.DEFAULT.getHours(),
-                -Work.DEFAULT.getHpCost(), Work.DEFAULT.getPlunReward(), Work.DEFAULT.getWorkEfficiencyGain()),
+        WORK("労働", "本日の候補から仕事を選ぶ", 0, 0, 0, 0),
         REST("休息", "ゆっくり休んで体力を回復", 3, 25, 0, 0),
         HEAL("回復魔法", "プルンを使って体力を大きく回復", 1, 40, -15, 0),
         TRAIN("鍛錬", "時間と育てる能力を選ぶ", Train.DEFAULT.getHours(),
@@ -152,6 +155,8 @@ public class GameSession {
 
     /** 実行不可の理由。HPを消費し尽くす行動は死亡判定の対象として許可する。 */
     public String unavailableReason(Action action) {
+        if (action == Action.WORK) return dailyWork.stream().anyMatch(work -> workUnavailableReason(work).isEmpty())
+                ? "" : "実行可能な労働がありません";
         if (action == Action.TRAIN) return trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, action.hours);
         if (isGameOver()) return "ゲームオーバーです";
         if (pendingBattle != null) return "戦闘結果を確認してください";
@@ -164,6 +169,7 @@ public class GameSession {
 
     /** 実行条件を確認して資源へ反映する。 */
     public void execute(Action action) {
+        if (action == Action.WORK) throw new IllegalStateException("労働を選択してください");
         if (action == Action.TRAIN) { train(TrainingAbility.WORK_EFFICIENCY, action.hours); return; }
         String reason = unavailableReason(action);
         if (!reason.isEmpty()) throw new IllegalStateException(reason);
@@ -175,14 +181,67 @@ public class GameSession {
         changeWorkEfficiency(effect.workEfficiency());
         battleMessage = "";
         if (isGameOver()) return;
-        if (action == Action.WORK && battle.occurs(random, calculate(BATTLE_CHANCE, SimpleBattle.BASE_CHANCE))) {
+        if (action == Action.REST) applyRecovery(items.restCompleted());
+        objectives.recordAction(false);
+        evaluateObjective(false);
+    }
+
+    /** 当日の候補を読み取り専用で返す。 */
+    public List<Work> getDailyWork() { return dailyWork; }
+
+    /** 労働前の状態からコストと報酬を計算し、途中では丸めない。 */
+    public Effects workEffects(Work work) {
+        return new Effects(BigDecimal.valueOf(work.hours()), calculate(WORK_HP_COST, work.hpCost()).negate(),
+                calculate(WORK_PLUN_REWARD, work.plunReward(), new Modifier(Modifier.Type.PERCENT,
+                        BigDecimal.valueOf(workEfficiency).multiply(BigDecimal.valueOf(Work.EFFICIENCY_REWARD_PERCENT)))),
+                BigDecimal.ZERO);
+    }
+
+    /** 表示・実行で共有する最終値。確率は危険度による禁止判定前の値。 */
+    public record WorkPreview(int hours, int hpCost, int reward, int battleChance) { }
+    /** 小目標や日終了処理を含まない、一回の労働結果。 */
+    public record WorkResult(Work work, int day, int hours, int hpCost, int reward, boolean battleOccurred) { }
+
+    /** 最終資源に反映した場合の実際の増減を返す。 */
+    public WorkPreview previewWork(Work work) {
+        Effects effect = workEffects(work);
+        int hpAfter = Modifier.floor(BigDecimal.valueOf(hp).add(effect.hp()).min(BigDecimal.valueOf(maxHp)));
+        int duration = items.allowsOvertime() ? Math.min(hours, work.hours()) : work.hours();
+        return new WorkPreview(duration, hp - hpAfter,
+                Modifier.floor(BigDecimal.valueOf(plun).add(effect.plun())) - plun,
+                Modifier.probability(calculate(BATTLE_CHANCE, work.battleChance())));
+    }
+
+    /** 候補・資源・戦闘待ちを開始直前にも検証する。 */
+    public String workUnavailableReason(Work work) {
+        if (isGameOver()) return "ゲームオーバーです";
+        if (pendingBattle != null) return "戦闘結果を確認してください";
+        if (work == null) return "労働を選択してください";
+        if (!dailyWork.contains(work)) return "本日の候補ではありません";
+        if (hours < work.hours() && !(hours > 0 && items.allowsOvertime())) return "時間が足りません";
+        if (hp - previewWork(work).hpCost() < 1) return "体力が足りません（HPを1以上残す必要があります）";
+        return "";
+    }
+
+    /** 労働の資源反映、戦闘抽選、成長と小目標通知を一度だけ行う。 */
+    public WorkResult work(Work work) {
+        String reason = workUnavailableReason(work);
+        if (!reason.isEmpty()) throw new IllegalStateException(reason);
+        WorkPreview preview = previewWork(work);
+        hours -= preview.hours();
+        hp -= preview.hpCost();
+        changePlun(BigDecimal.valueOf(preview.reward()));
+        battleMessage = "";
+        boolean encountered = work.danger() > 0 && battle.occurs(random, BigDecimal.valueOf(preview.battleChance()));
+        if (encountered) {
             pendingBattle = new AutoBattle(battleStats, BattleStats.INITIAL);
             battleMessage = "帰り道でトカゲ戦士に遭遇した！";
         }
-        if (action == Action.WORK) items.workCompleted();
-        if (action == Action.REST) applyRecovery(items.restCompleted());
-        objectives.recordAction(action == Action.WORK);
+        WorkResult result = new WorkResult(work, day, preview.hours(), preview.hpCost(), preview.reward(), encountered);
+        items.workCompleted();
+        objectives.recordAction(true);
         evaluateObjective(false);
+        return result;
     }
 
     /** 表示と実行で共有する鍛錬の最終結果。 */
@@ -265,6 +324,10 @@ public class GameSession {
     private void beginDay() {
         String notice = events.startDay(day);
         if (!notice.isEmpty()) notices.add(notice.strip());
+        List<Work> pool = new ArrayList<>(Work.CATALOG);
+        List<Work> selected = new ArrayList<>();
+        while (selected.size() < 2 && !pool.isEmpty()) selected.add(pool.remove(workRandom.nextInt(pool.size())));
+        dailyWork = List.copyOf(selected);
         resetDailyHours();
         if (events.restoresHpAtDayStart()) restoreHpToMax();
         if (objectives.startDay(day, plun)) notices.add("小目標予告\n" + objectives.describe(plun));
