@@ -55,6 +55,60 @@ class MainMenuTest {
         });
     }
 
+    /** 選択中の予測は資源を変更せず、開始時に消え、完了後に次回分へ更新する。 */
+    @Test void workPreviewFollowsSelectionExecutionAndClose() throws Exception {
+        var game = fixedGame();
+        TestMenu[] menu = new TestMenu[1];
+        SwingUtilities.invokeAndWait(() -> {
+            menu[0] = new TestMenu(game);
+            menu[0].openWork();
+            var gauges = collect(menu[0], PreviewGauge.class);
+            collect(menu[0].workPanel, JToggleButton.class).getFirst().doClick();
+            assertEquals("100 → 75 / 100", gauges.get(0).getString());
+            assertEquals("12 → 8 / 12", gauges.get(1).getString());
+            assertEquals(100, game.getHp());
+            assertEquals(12, game.getHours());
+            collect(menu[0].workPanel, JToggleButton.class).get(1).doClick();
+            assertEquals("100 → 60 / 100", gauges.get(0).getString());
+            collect(menu[0].workPanel, JToggleButton.class).getFirst().doClick();
+            start(menu[0].workPanel).doClick();
+            assertEquals("100 / 100", gauges.get(0).getString());
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            var gauges = collect(menu[0], PreviewGauge.class);
+            assertEquals("75 → 50 / 100", gauges.get(0).getString());
+            assertEquals("8 → 4 / 12", gauges.get(1).getString());
+            menu[0].workPanel.requestClose();
+            assertEquals("75 / 100", gauges.get(0).getString());
+            assertEquals("8 / 12", gauges.get(1).getString());
+            menu[0].removeNotify();
+        });
+    }
+
+    /** 不足時は警告を表示し、日付変更と死亡で予測を解除する。 */
+    @Test void workPreviewWarnsAndClearsOnDayChangeOrDeath() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            game.changeHp(java.math.BigDecimal.valueOf(-90));
+            game.changeHours(java.math.BigDecimal.valueOf(-11));
+            TestMenu menu = new TestMenu(game);
+            menu.openWork();
+            collect(menu.workPanel, JToggleButton.class).getFirst().doClick();
+            var gauges = collect(menu, PreviewGauge.class);
+            assertEquals("10 → 0 / 100", gauges.get(0).getString());
+            assertEquals("1 → 0 / 12", gauges.get(1).getString());
+            assertEquals("時間が足りません", gauges.get(0).getToolTipText());
+            game.nextDay();
+            menu.workPanel.refresh();
+            assertFalse(gauges.get(0).getString().contains("→"));
+            collect(menu.workPanel, JToggleButton.class).getFirst().doClick();
+            game.changeHp(java.math.BigDecimal.valueOf(-10));
+            menu.workPanel.refresh();
+            assertFalse(gauges.get(0).getString().contains("→"));
+            menu.removeNotify();
+        });
+    }
+
     /** 労働の結果から回復魔法の可否、資源、ログを更新する。 */
     @Test
     void actionButtonsUpdateStatusAndLog() throws Exception {

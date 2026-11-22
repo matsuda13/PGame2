@@ -42,9 +42,9 @@ public class MainMenu extends JPanel {
     /** 労働効率表示。 */
     private final JLabel workEfficiency = label("", 21);
     /** 体力表示。 */
-    private final JProgressBar hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
+    private final PreviewGauge hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
     /** 残り時間表示。 */
-    private final JProgressBar hours = meter(GameSession.DAILY_HOURS, new Color(89, 177, 209));
+    private final PreviewGauge hours = meter(GameSession.DAILY_HOURS, new Color(89, 177, 209));
     /** 行動結果と進行状況の表示。 */
     private final JLabel message = label("今日はどうしようかな…", 18);
     /** 時系列の行動ログ。 */
@@ -263,7 +263,7 @@ public class MainMenu extends JPanel {
 
     /** 労働結果を記録し、戦闘確認後に既存の日終了・死亡判定へ接続する。 */
     protected WorkPanel createWorkPanel(Runnable close) {
-        return new WorkPanel(() -> new WorkPanel.State(session.getDay(), session.getHours(), session.getHp(),
+        WorkPanel panel = new WorkPanel(() -> new WorkPanel.State(session.getDay(), session.getHours(), session.getHp(),
                 session.getMaxHp(), session.getPlun(), session.getDailyWork()), work -> {
                     var value = session.previewWork(work);
                     return new WorkPanel.Preview(value.hours(), value.hpCost(), value.reward(), value.battleChance());
@@ -286,6 +286,22 @@ public class MainMenu extends JPanel {
                             + " PLN / 消費 " + result.hours() + "時間 / HP損失 " + result.hpCost()
                             + "<br>" + battleResult + "（戦闘による通常HP損失なし）</html>";
                 }, close);
+        panel.setSelectionListener(work -> {
+            if (work == null || session.isGameOver()) { clearWorkPreview(); return; }
+            var preview = session.previewWork(work);
+            String reason = session.workUnavailableReason(work);
+            hp.showPreview(session.getHp(), session.getHp() - preview.hpCost(), reason);
+            hours.showPreview(session.getHours(), session.getHours() - preview.hours(), reason);
+            repaint();
+        });
+        return panel;
+    }
+
+    /** 労働の予測表示だけを解除する。 */
+    private void clearWorkPreview() {
+        hp.clearPreview();
+        hours.clearPreview();
+        repaint();
     }
 
     /** 選択画面を閉じてから既存の行動後処理へ接続する。 */
@@ -355,6 +371,7 @@ public class MainMenu extends JPanel {
 
     /** ゲームオーバー後に初期状態へ戻す。 */
     private void restart() {
+        clearWorkPreview();
         animations.cancel();
         statusInitialized = false;
         session = new GameSession();
@@ -414,6 +431,7 @@ public class MainMenu extends JPanel {
     /** 画面を閉じた際にタイマーと古い演出を破棄する。 */
     @Override
     public void removeNotify() {
+        clearWorkPreview();
         animations.cancel();
         super.removeNotify();
     }
@@ -421,6 +439,8 @@ public class MainMenu extends JPanel {
     @Override
     protected void paintChildren(Graphics graphics) {
         super.paintChildren(graphics);
+        hp.paintDelta(graphics, this);
+        hours.paintDelta(graphics, this);
         animations.texts().paint(graphics);
     }
 
@@ -463,8 +483,8 @@ public class MainMenu extends JPanel {
     }
 
     /** 資源の割合と値を表示する。 */
-    private static JProgressBar meter(int max, Color color) {
-        JProgressBar meter = new JProgressBar(0, max);
+    private static PreviewGauge meter(int max, Color color) {
+        PreviewGauge meter = new PreviewGauge(max);
         meter.setForeground(color);
         meter.setStringPainted(true);
         meter.setMaximumSize(new Dimension(220, 26));

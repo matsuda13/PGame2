@@ -3,6 +3,7 @@ package pgame2.work;
 import java.awt.*;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -23,6 +24,10 @@ public final class WorkPanel extends JPanel {
     private final Function<Work, String> perform;
     /** ウィンドウを閉じる処理。 */
     private final Runnable close;
+    /** 選択と解除を親画面へ通知する。 */
+    private Consumer<Work> selectionChanged = work -> { };
+    /** 閉じた後の再通知を防ぐ。 */
+    private boolean closed;
     /** 当日内で維持する選択。 */
     private Work selected;
     /** 最後に表示した日。 */
@@ -88,7 +93,21 @@ public final class WorkPanel extends JPanel {
     }
 
     /** 処理中はタイトルバーの閉じる操作も無効化する。 */
-    public void requestClose() { if (!busy) close.run(); }
+    public void requestClose() {
+        if (!busy) { closed = true; selectionChanged.accept(null); close.run(); }
+    }
+
+    /** 親画面のプレビュー更新先を登録する。 */
+    public void setSelectionListener(Consumer<Work> listener) {
+        selectionChanged = listener;
+        selectionChanged.accept(null);
+    }
+
+    @Override public void removeNotify() {
+        closed = true;
+        selectionChanged.accept(null);
+        super.removeNotify();
+    }
 
     /** 開始を予約して先に操作をロックし、連続したクリックを受け付けない。 */
     private void beginWork() {
@@ -141,6 +160,7 @@ public final class WorkPanel extends JPanel {
                     + "<br>" + (selected.danger() == 0 ? "危険度0：戦闘は発生しません" : "戦闘HPは通常HPとは独立しています") + "</html>");
             illustration.setText(selected.name() + "のイラスト（仮）");
         }
+        selectionChanged.accept(busy || closed || current.hp() <= 0 ? null : selected);
         revalidate();
         repaint();
     }
