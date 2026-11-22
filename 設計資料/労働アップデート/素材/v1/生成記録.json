@@ -1,0 +1,202 @@
+[
+  {
+    "id": "hauling_icon",
+    "job": "hauling",
+    "type": "icon",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-38e31caf-9a62-48f1-acdb-aa1070c2151e.png",
+    "prompt": "Create one standalone square game UI inventory icon, hauling job: a single simple warm ochre wooden crate with two broad slats and a short loop of rope, no character. Centered silhouette readable at 48px, generous transparent padding, no border, no text, no numbers, no watermark. Art direction: old children's book, actual sparse watercolor washes and very thin restrained broken sepia ink lines only where necessary; maximum five pigments muted blue, ochre, burnt sienna, sage green, sepia, mixing allowed. Leave paper-white negative spaces within painting, no white paint, no glow, no gloss, no digital gradients, no 3D, no detailed wood grain. Use the supplied title illustration as STYLE REFERENCE ONLY: much less detail, no copied title/text/scenery. Output actual transparent background.",
+    "file": "hauling/icon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "hauling_working",
+    "job": "hauling",
+    "type": "working",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-28202380-58e7-45c2-b0b5-a728a9d4ad67.png",
+    "prompt": "Create ONE standalone landscape 3:2 watercolor vignette for the right-hand illustration of a Japanese cozy survival game's job dialog. References: first image STYLE ONLY (ignore all text), second CHARACTER IDENTITY ONLY (remove any glow and thick outline). Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. The slime is carrying ONE wooden crate balanced on top of its head/body, visibly squashed wide by the weight, concentrating with a small straight mouth. Two faint grass marks and a soft ochre ground wash. No second character.",
+    "cleanup_prompt": "Edit this game illustration ONLY to remove the broad white/cream luminous halo and all airbrushed fog surrounding the objects. Keep exactly the slime, its face, its pose, the tools and the small watercolor ground patch. Everything outside the actual painted object/ground silhouettes must be fully alpha-transparent, not a white feathered glow or paper rectangle. Preserve original watercolor pigment granulation and reserved paper-white INSIDE the slime. Preserve the artwork's colors, layout, size and fine lines. Do not add new detail. Natural watercolor irregular edges are fine but remove the large soft radial haze entirely. Output clean transparent PNG cutout.",
+    "file": "hauling/working.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "hauling_result",
+    "job": "hauling",
+    "type": "result",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-b72bd248-aaa6-4217-aa39-134158d9d04d.png",
+    "prompt": "Create ONE standalone square watercolor vignette for the small bottom result illustration of a Japanese cozy survival game's job dialog. Reference image: keep this character identity and watercolor treatment, but draw a new completion pose.  Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. Job finished: the slime has set the wooden crate down beside it and returned to its round shape, a small relieved smile, one tiny tired droop. One crate only, no contents detail, no coins, no text. Compact group readable in a 120px result area.",
+    "file": "hauling/result.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "bridge_icon",
+    "job": "bridge",
+    "type": "icon",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-b3701966-41ad-4c11-a9d7-fcd58b8aa78e.png",
+    "prompt": "Standalone square game asset, simple sparse watercolor and very fine intermittent sepia ink, old warm children's book illustration. Use at most five watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia; mixes allowed. Paper-white gaps, one layer of shadow, restrained natural watercolor edges. No glow, gloss, digital gradient, 3D, dense texture, lettering, border or watermark. Actual transparent background and generous padding. Inventory icon for the work selection list. One wooden mallet lying diagonally across two short timber planks. A single clear grouped silhouette readable at 48px. No character or scenery.",
+    "file": "bridge/icon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "bridge_working",
+    "job": "bridge",
+    "type": "working",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-5e0b72a0-a7c5-4bd5-ad11-9f913e03bd92.png",
+    "prompt": "Create ONE standalone landscape 3:2 watercolor vignette for the right-hand illustration of a Japanese cozy survival game's job dialog. References: first image STYLE ONLY (ignore all text), second CHARACTER IDENTITY ONLY (remove any glow and thick outline). Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. The slime is on a short unfinished timber footbridge over a tiny pale blue suggestion of a stream, lifting a plain wooden mallet with one small soft body lobe to tap a plank. The slime and tool dominate; only 3-4 planks, simple unfinished end, no complex scaffolding. A determined tiny mouth.",
+    "cleanup_prompt": "Edit this game illustration ONLY to remove the broad white/cream luminous halo and all airbrushed fog surrounding the objects. Keep exactly the slime, its face, its pose, the tools and the small watercolor ground patch. Everything outside the actual painted object/ground silhouettes must be fully alpha-transparent, not a white feathered glow or paper rectangle. Preserve original watercolor pigment granulation and reserved paper-white INSIDE the slime. Preserve the artwork's colors, layout, size and fine lines. Do not add new detail. Natural watercolor irregular edges are fine but remove the large soft radial haze entirely. Output clean transparent PNG cutout.",
+    "file": "bridge/working.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "bridge_result",
+    "job": "bridge",
+    "type": "result",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-9f7a49eb-9605-48e3-8814-d79890f66fec.png",
+    "prompt": "Create ONE standalone square watercolor vignette for the small bottom result illustration of a Japanese cozy survival game's job dialog. Reference image: keep this character identity and watercolor treatment, but draw a new completion pose.  Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. Job finished: the slime rests beside a short finished timber footbridge, the mallet placed on the ground. Quiet satisfied small smile, no celebration rays. The bridge is a tiny simple 3-plank suggestion beside the main character, no full landscape. Compact group readable at 120px.",
+    "file": "bridge/result.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "sewing_icon",
+    "job": "sewing",
+    "type": "icon",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-e6e55ce0-a02c-40f2-ab78-7c5bbbe2ed6b.png",
+    "prompt": "Standalone square game asset, simple sparse watercolor and very fine intermittent sepia ink, old warm children's book illustration. Use at most five watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia; mixes allowed. Paper-white gaps, one layer of shadow, restrained natural watercolor edges. No glow, gloss, digital gradient, 3D, dense texture, lettering, border or watermark. Actual transparent background and generous padding. Inventory icon for the work selection list. One folded muted blue cloth with a large sewing needle and a short curved sepia thread. Very simple silhouettes, readable at 48px. No character or scenery.",
+    "file": "sewing/icon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "sewing_working",
+    "job": "sewing",
+    "type": "working",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-1d139a5c-bea8-4b6d-b95e-23fc7d08980b.png",
+    "prompt": "Create ONE standalone landscape 3:2 watercolor vignette for the right-hand illustration of a Japanese cozy survival game's job dialog. References: first image STYLE ONLY (ignore all text), second CHARACTER IDENTITY ONLY (remove any glow and thick outline). Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. The slime leans over a small pale blue cloth on a low plain wooden work surface, carefully drawing a large needle and short thread through the fabric using two tiny body lobes. Calm focused expression; one spool only. Minimal details.",
+    "cleanup_prompt": "Edit this game illustration ONLY to remove the broad white/cream luminous halo and all airbrushed fog surrounding the objects. Keep exactly the slime, its face, its pose, the tools and the small watercolor ground patch. Everything outside the actual painted object/ground silhouettes must be fully alpha-transparent, not a white feathered glow or paper rectangle. Preserve original watercolor pigment granulation and reserved paper-white INSIDE the slime. Preserve the artwork's colors, layout, size and fine lines. Do not add new detail. Natural watercolor irregular edges are fine but remove the large soft radial haze entirely. Output clean transparent PNG cutout.",
+    "file": "sewing/working.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "sewing_result",
+    "job": "sewing",
+    "type": "result",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-ff6c4da4-fe07-4be7-af44-7d8cc74f7acc.png",
+    "prompt": "Create ONE standalone square watercolor vignette for the small bottom result illustration of a Japanese cozy survival game's job dialog. Reference image: keep this character identity and watercolor treatment, but draw a new completion pose.  Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. Job finished: smiling slime presents ONE neatly folded blue cloth with one simple visible sewn seam; the needle and spool are set aside small. No table needed, no excessive stitches. Compact group readable at 120px.",
+    "file": "sewing/result.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "mining_icon",
+    "job": "mining",
+    "type": "icon",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-2f4c83e0-276c-4afa-bc62-3b973dfc818f.png",
+    "prompt": "Standalone square game asset, simple sparse watercolor and very fine intermittent sepia ink, old warm children's book illustration. Use at most five watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia; mixes allowed. Paper-white gaps, one layer of shadow, restrained natural watercolor edges. No glow, gloss, digital gradient, 3D, dense texture, lettering, border or watermark. Actual transparent background and generous padding. Inventory icon for the work selection list. One plain wooden-handled iron pickaxe resting diagonally against one small gray-blue rock. No gems or glow. Readable at 48px. No character or scenery.",
+    "file": "mining/icon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "mining_working",
+    "job": "mining",
+    "type": "working",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-0c47b791-ac41-45c2-846f-4de8e1fc2139.png",
+    "prompt": "Create ONE standalone landscape 3:2 watercolor vignette for the right-hand illustration of a Japanese cozy survival game's job dialog. References: first image STYLE ONLY (ignore all text), second CHARACTER IDENTITY ONLY (remove any glow and thick outline). Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. The slime bends beside one gray-blue rock, holding a plain wood-handled pickaxe with a small body lobe, poised midway through a gentle strike. Two small stone chips at ground level, no sparks or gems. Focused determined expression. No cave backdrop.",
+    "cleanup_prompt": "Edit this game illustration ONLY to remove the broad white/cream luminous halo and all airbrushed fog surrounding the objects. Keep exactly the slime, its face, its pose, the tools and the small watercolor ground patch. Everything outside the actual painted object/ground silhouettes must be fully alpha-transparent, not a white feathered glow or paper rectangle. Preserve original watercolor pigment granulation and reserved paper-white INSIDE the slime. Preserve the artwork's colors, layout, size and fine lines. Do not add new detail. Natural watercolor irregular edges are fine but remove the large soft radial haze entirely. Output clean transparent PNG cutout.",
+    "file": "mining/working.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "mining_result",
+    "job": "mining",
+    "type": "result",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-403281b7-e0b3-4f47-b883-42b27415d895.png",
+    "prompt": "Create ONE standalone square watercolor vignette for the small bottom result illustration of a Japanese cozy survival game's job dialog. Reference image: keep this character identity and watercolor treatment, but draw a new completion pose.  Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. Job finished: the slime sits a little tired but content beside a small pile of three plain gray-blue ore stones, the pickaxe resting on the ground. No gems, no sparkles, no reward coins. Compact group readable at 120px.",
+    "file": "mining/result.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "gathering_icon",
+    "job": "gathering",
+    "type": "icon",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-9327056b-717f-4749-8377-e5cdf542a088.png",
+    "prompt": "Standalone square game asset, simple sparse watercolor and very fine intermittent sepia ink, old warm children's book illustration. Use at most five watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia; mixes allowed. Paper-white gaps, one layer of shadow, restrained natural watercolor edges. No glow, gloss, digital gradient, 3D, dense texture, lettering, border or watermark. Actual transparent background and generous padding. Inventory icon for the work selection list. One simple ochre woven basket with three large sage green leaves peeking out. Basket weave indicated by just a few lines. Readable at 48px. No character or scenery.",
+    "file": "gathering/icon.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "gathering_working",
+    "job": "gathering",
+    "type": "working",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-ccc68148-8b7f-4c8e-a47d-304c371e16d8.png",
+    "prompt": "Create ONE standalone landscape 3:2 watercolor vignette for the right-hand illustration of a Japanese cozy survival game's job dialog. References: first image STYLE ONLY (ignore all text), second CHARACTER IDENTITY ONLY (remove any glow and thick outline). Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. The slime gently collects a broad sage-green leaf from a low herb plant into a small ochre basket beside it. One small body lobe holding the leaf, two simplified nearby plants, tiny grass wash; friendly focused expression. No extensive forest background.",
+    "cleanup_prompt": "Edit this game illustration ONLY to remove the broad white/cream luminous halo and all airbrushed fog surrounding the objects. Keep exactly the slime, its face, its pose, the tools and the small watercolor ground patch. Everything outside the actual painted object/ground silhouettes must be fully alpha-transparent, not a white feathered glow or paper rectangle. Preserve original watercolor pigment granulation and reserved paper-white INSIDE the slime. Preserve the artwork's colors, layout, size and fine lines. Do not add new detail. Natural watercolor irregular edges are fine but remove the large soft radial haze entirely. Output clean transparent PNG cutout.",
+    "file": "gathering/working.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA"
+  },
+  {
+    "id": "gathering_result",
+    "job": "gathering",
+    "type": "result",
+    "source": "C:\\Users\\DevUser\\.codex\\generated_images\\01a200c6-ba30-7010-bcf5-014a1c1e6ce9\\exec-b6584a3f-ab9f-4296-8f04-a96f161b5fb9.png",
+    "prompt": "Create ONE standalone square watercolor vignette for the small bottom result illustration of a Japanese cozy survival game's job dialog. Reference image: keep this character identity and watercolor treatment, but draw a new completion pose.  Same simple pale blue rounded plun slime, two small vertical sepia eyes and tiny mouth, no humanoid hands or legs; simple small body lobes can hold a tool. Maximum FIVE watercolor pigments: muted blue, ochre, burnt sienna, sage green, sepia. Very sparse washes, paper white reserved in the subject, one shadow wash, almost no outline except thin partial irregular ink at recognition points. Old children's literature, warm and modest, half the usual detail. Props simple silhouettes. Subject centered in generous empty margins. Only a tiny ground wash, not a full background; genuine transparent background. No text, borders, panels, watermark, white glow, digital gradient, hard glossy highlights, neon or 3D. Subject and props fully inside frame. Job finished: the slime stands contentedly beside a small basket full of three broad leaves and a single modest sprig. Simple satisfied mouth, minimal grass at base, no forest. Compact group readable at 120px.",
+    "file": "gathering/result.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA"
+  }
+]

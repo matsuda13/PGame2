@@ -40,9 +40,9 @@ public class MainMenu extends JPanel {
     /** 日付表示。 */
     private final JLabel day = label("", 27);
     /** 所持プルン表示。 */
-    private final JLabel plun = label("", 21);
+    private final PreviewValueLabel plun = new PreviewValueLabel("プルン");
     /** 労働効率表示。 */
-    private final JLabel workEfficiency = label("", 21);
+    private final PreviewValueLabel workEfficiency = new PreviewValueLabel("労働効率");
     /** 体力表示。 */
     private final PreviewGauge hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
     /** 残り時間表示。 */
@@ -221,6 +221,8 @@ public class MainMenu extends JPanel {
         String reason = session.unavailableReason(action);
         hp.showPreview(session.getHp(), preview.hpAfter(), preview.maxHpAfter(), reason);
         hours.showPreview(session.getHours(), preview.hoursAfter(), reason);
+        plun.showPreview(session.getPlun(), preview.plunAfter(), reason);
+        workEfficiency.showPreview(session.getWorkEfficiency(), preview.workEfficiencyAfter(), reason);
         repaint();
     }
 
@@ -328,6 +330,8 @@ public class MainMenu extends JPanel {
             String reason = session.workUnavailableReason(work);
             hp.showPreview(session.getHp(), session.getHp() - preview.hpCost(), reason);
             hours.showPreview(session.getHours(), session.getHours() - preview.hours(), reason);
+            plun.showPreview(session.getPlun(), Math.addExact(session.getPlun(), preview.reward()), reason);
+            workEfficiency.showPreview(session.getWorkEfficiency(), session.getWorkEfficiency(), reason);
             repaint();
         });
         return panel;
@@ -337,6 +341,8 @@ public class MainMenu extends JPanel {
     private void clearActionPreview() {
         hp.clearPreview();
         hours.clearPreview();
+        plun.clearPreview();
+        workEfficiency.clearPreview();
         repaint();
     }
 
@@ -372,6 +378,9 @@ public class MainMenu extends JPanel {
             String reason = session.trainingUnavailableReason(ability, duration);
             hp.showPreview(session.getHp(), preview.hpAfter(), reason);
             hours.showPreview(session.getHours(), session.getHours() - duration, reason);
+            plun.showPreview(session.getPlun(), session.getPlun(), reason);
+            workEfficiency.showPreview(session.getWorkEfficiency(),
+                    ability == TrainingAbility.WORK_EFFICIENCY ? preview.after() : session.getWorkEfficiency(), reason);
             repaint();
         });
         return panel;
@@ -447,8 +456,8 @@ public class MainMenu extends JPanel {
         shownPlun = session.getPlun();
         shownWorkEfficiency = session.getWorkEfficiency();
         statusInitialized = true;
-        plun.setText("プルン   " + session.getPlun());
-        workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
+        plun.showValue(session.getPlun());
+        workEfficiency.showValue(session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
             if (action == Action.WORK) {

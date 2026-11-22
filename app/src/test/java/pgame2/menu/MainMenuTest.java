@@ -76,6 +76,7 @@ class MainMenuTest {
         });
         SwingUtilities.invokeAndWait(() -> {
             var gauges = collect(menu[0], PreviewGauge.class);
+            assertTrue(collect(menu[0], PreviewValueLabel.class).getFirst().getText().contains("→ 160 (+30)"));
             assertEquals("75 → 50 / 100", gauges.get(0).getString());
             assertEquals("8 → 4 / 12", gauges.get(1).getString());
             menu[0].workPanel.requestClose();
@@ -181,6 +182,62 @@ class MainMenuTest {
             assertEquals("85 / 100", gauges.get(0).getString());
             menu.removeNotify();
         });
+    }
+
+    /** 全数値欄が同じ行動の予測を示し、能力切り替えとキャンセルに追従する。 */
+    @Test void numericStatusPreviewsFollowWorkHealingAndTraining() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            TestMenu menu = new TestMenu(game);
+            var numbers = collect(menu, PreviewValueLabel.class);
+            menu.openWork();
+            collect(menu.workPanel, JToggleButton.class).getFirst().doClick();
+            assertTrue(numbers.get(0).getText().contains("→ 130 (+30)"));
+            assertTrue(numbers.get(1).getText().contains("→ 0 (±0)"));
+            menu.workPanel.requestClose();
+            assertEquals("プルン   100", numbers.get(0).getText());
+            var heal = collect(menu, JButton.class).stream().filter(b -> b.getText().equals("実行する")).toList().get(2);
+            mouse(heal, java.awt.event.MouseEvent.MOUSE_ENTERED, 1, 1);
+            assertTrue(numbers.get(0).getText().contains("→ 85 (-15)"));
+            mouse(heal.getParent(), java.awt.event.MouseEvent.MOUSE_EXITED, -1, -1);
+            var training = menu.createTrainingPanel(() -> { });
+            collect(training, JSlider.class).getFirst().setValue(3);
+            assertTrue(numbers.get(1).getText().contains("→ 3 (+3)"));
+            assertTrue(numbers.get(0).getText().contains("→ 100 (±0)"));
+            collect(training, JRadioButton.class).getLast().doClick();
+            assertTrue(numbers.get(1).getText().contains("→ 0 (±0)"));
+            training.removeNotify();
+            assertEquals("労働効率   0", numbers.get(1).getText());
+            assertEquals(100, game.getPlun());
+            assertEquals(0, game.getWorkEfficiency());
+            menu.removeNotify();
+        });
+    }
+
+    /** 左側の固定領域で数値の予測が収まることを描画して確認する。 */
+    @Test void rendersAllStatusPreviews() throws Exception {
+        java.awt.image.BufferedImage[] image = new java.awt.image.BufferedImage[1];
+        SwingUtilities.invokeAndWait(() -> {
+            var game = fixedGame();
+            TestMenu menu = new TestMenu(game);
+            menu.setSize(1360, 780);
+            menu.openWork();
+            collect(menu.workPanel, JToggleButton.class).getFirst().doClick();
+            layoutStatus(menu);
+            image[0] = new java.awt.image.BufferedImage(1360, 780, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            var graphics = image[0].createGraphics();
+            try { menu.printAll(graphics); } finally { graphics.dispose(); }
+            menu.removeNotify();
+        });
+        var output = java.nio.file.Path.of("build", "status-preview.png");
+        java.nio.file.Files.createDirectories(output.getParent());
+        javax.imageio.ImageIO.write(image[0], "png", output.toFile());
+    }
+
+    /** ウィンドウを開かず子部品まで配置する。 */
+    private static void layoutStatus(Container parent) {
+        parent.doLayout();
+        for (Component child : parent.getComponents()) if (child instanceof Container nested) layoutStatus(nested);
     }
 
     /** 実ウィンドウなしでカーソルの出入りを通知する。 */

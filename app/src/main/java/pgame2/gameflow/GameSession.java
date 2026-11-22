@@ -187,7 +187,7 @@ public class GameSession {
     }
 
     /** 即時実行する行動の、日終了処理を含まない予測結果。 */
-    public record ActionPreview(int hpAfter, int maxHpAfter, int hoursAfter) { }
+    public record ActionPreview(int hpAfter, int maxHpAfter, int hoursAfter, int plunAfter, int workEfficiencyAfter) { }
 
     /** 補正、資源ごとの端数処理、休息後の回復を状態変更なしで再現する。 */
     public ActionPreview previewAction(Action action) {
@@ -203,7 +203,9 @@ public class GameSession {
             afterHp = Modifier.floor(BigDecimal.valueOf((long) afterHp + recovery.maxHp() + recovery.hp())
                     .max(BigDecimal.ZERO).min(BigDecimal.valueOf(afterMax)));
         }
-        return new ActionPreview(afterHp, afterMax, Modifier.floor(BigDecimal.valueOf(hours).subtract(cost)));
+        return new ActionPreview(afterHp, afterMax, Modifier.floor(BigDecimal.valueOf(hours).subtract(cost)),
+                Modifier.floor(BigDecimal.valueOf(plun).add(effect.plun())),
+                Modifier.floor(BigDecimal.valueOf(workEfficiency).add(effect.workEfficiency())));
     }
 
     /** 当日の候補を読み取り専用で返す。 */

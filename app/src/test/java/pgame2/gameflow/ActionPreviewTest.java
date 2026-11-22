@@ -33,19 +33,25 @@ class ActionPreviewTest {
         GameSession game = new GameSession(new java.util.Random(0)) {
             @Override public Effects effects(Action action) {
                 if (action != REST) return super.effects(action);
-                return new Effects(new BigDecimal("3.5"), new BigDecimal("12.5"), BigDecimal.ZERO, BigDecimal.ZERO);
+                return new Effects(new BigDecimal("3.5"), new BigDecimal("12.5"), new BigDecimal("2.5"), new BigDecimal("1.5"));
             }
         };
         game.changeHp(BigDecimal.valueOf(-40));
         var preview = game.previewAction(REST);
+        assertEquals(102, preview.plunAfter());
+        assertEquals(1, preview.workEfficiencyAfter());
         assertEquals(72, preview.hpAfter());
         assertEquals(8, preview.hoursAfter());
         game.execute(REST);
+        assertEquals(preview.plunAfter(), game.getPlun());
+        assertEquals(preview.workEfficiencyAfter(), game.getWorkEfficiency());
         assertEquals(preview.hpAfter(), game.getHp());
         assertEquals(preview.hoursAfter(), game.getHours());
         preview = game.previewAction(HEAL);
         assertEquals(100, preview.hpAfter());
         game.execute(HEAL);
+        assertEquals(preview.plunAfter(), game.getPlun());
+        assertEquals(preview.workEfficiencyAfter(), game.getWorkEfficiency());
         assertEquals(preview.hpAfter(), game.getHp());
         assertEquals(preview.hoursAfter(), game.getHours());
     }

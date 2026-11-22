@@ -1,0 +1,122 @@
+[
+  {
+    "file": "hauling\\icon.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 884837
+  },
+  {
+    "file": "hauling\\working.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1725967
+  },
+  {
+    "file": "hauling\\result.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1367902
+  },
+  {
+    "file": "bridge\\icon.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 1199347
+  },
+  {
+    "file": "bridge\\working.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1732661
+  },
+  {
+    "file": "bridge\\result.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 674253
+  },
+  {
+    "file": "sewing\\icon.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 1076316
+  },
+  {
+    "file": "sewing\\working.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1523048
+  },
+  {
+    "file": "sewing\\result.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 913855
+  },
+  {
+    "file": "mining\\icon.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 955656
+  },
+  {
+    "file": "mining\\working.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1543289
+  },
+  {
+    "file": "mining\\result.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 878947
+  },
+  {
+    "file": "gathering\\icon.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 1305262
+  },
+  {
+    "file": "gathering\\working.png",
+    "width": 1536,
+    "height": 1024,
+    "alpha_min": 0,
+    "alpha_max": 254,
+    "bytes": 1549870
+  },
+  {
+    "file": "gathering\\result.png",
+    "width": 1254,
+    "height": 1254,
+    "alpha_min": 0,
+    "alpha_max": 255,
+    "bytes": 898825
+  }
+]
