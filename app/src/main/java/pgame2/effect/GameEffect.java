@@ -25,7 +25,7 @@ public interface GameEffect {
     interface DayStart extends GameEffect { boolean restoresHp(); }
     /** 労働完了後の成長通知。 */
     interface WorkCompleted extends GameEffect { void onWorkCompleted(); }
-    /** 休息完了後の回復・成長を返す。 */
+    /** 表示と実行で共用するため、状態を変えずに休息完了後の回復・成長を返す。 */
     interface RestCompleted extends GameEffect { Recovery onRestCompleted(); }
     /** 実際に失ったプルンを通知する。 */
     interface PlunSpent extends GameEffect { void onPlunSpent(long amount); }

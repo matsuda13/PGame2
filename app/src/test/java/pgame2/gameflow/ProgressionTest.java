@@ -26,9 +26,9 @@ class ProgressionTest {
         assertFalse(battle.occurs(fixed(40), 30));
         assertFalse(battle.occurs(fixed(0), -100));
         assertTrue(battle.occurs(fixed(99), 200));
-        GameSession game = new GameSession(fixed(0));
-        game.execute(WORK);
-        assertEquals(80, game.getHp());
+        GameSession game = new GameSession(fixed(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
+        game.work(game.getDailyWork().getFirst());
+        assertEquals(75, game.getHp());
         assertEquals(130, game.getPlun());
         assertEquals(8, game.getHours());
         var first = game.getPendingBattle();
@@ -39,29 +39,28 @@ class ProgressionTest {
         assertThrows(IllegalStateException.class, () -> game.execute(REST));
         assertThrows(IllegalStateException.class, game::confirmBattleResult);
         first.advanceTo(100);
-        assertEquals(80, game.getHp());
+        assertEquals(75, game.getHp());
         assertFalse(game.shouldEndDay());
         assertThrows(IllegalStateException.class, game::nextDay);
         game.confirmBattleResult();
         assertNull(game.getPendingBattle());
         assertTrue(game.getBattleMessage().contains("勝利"));
         assertThrows(IllegalStateException.class, game::confirmBattleResult);
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertNotSame(first, game.getPendingBattle());
         assertEquals(100, game.getPendingBattle().playerHp());
         game.getPendingBattle().advanceTo(100);
         game.confirmBattleResult();
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertFalse(game.shouldEndDay());
         game.getPendingBattle().advanceTo(100);
         game.confirmBattleResult();
         assertTrue(game.shouldEndDay());
         game.nextDay();
-        game.changeHp(java.math.BigDecimal.valueOf(-20));
-        game.execute(WORK);
-        assertTrue(game.isGameOver());
+        assertThrows(IllegalStateException.class, () -> game.work(game.getDailyWork().getFirst()));
+        assertFalse(game.isGameOver());
+        assertEquals(25, game.getHp());
         assertNull(game.getPendingBattle());
-        assertEquals("", game.getBattleMessage());
     }
 
     @Test
@@ -87,13 +86,13 @@ class ProgressionTest {
     @Test
     void allEventModifiersAndRestAvailability() {
         for (int kind = 0; kind < 5; kind++) {
-            GameSession game = new GameSession(fixed(kind));
+            GameSession game = new GameSession(fixed(kind), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
             // イベント検証中に生活費不足による死亡が混ざらないよう、資金を用意する。
             game.changePlun(java.math.BigDecimal.valueOf(2000));
             game.execute(TRAIN);
             while (game.getDay() < 9) game.nextDay();
             if (kind == 0) {
-                assertEquals(0, java.math.BigDecimal.valueOf(-26).compareTo(game.effects(WORK).hp()));
+                assertEquals(0, java.math.BigDecimal.valueOf(-32.5).compareTo(game.effects(WORK).hp()));
                 assertEquals(0, java.math.BigDecimal.valueOf(-15).compareTo(game.effects(TRAIN).hp()));
             }
             if (kind == 2) assertEquals(0, java.math.BigDecimal.valueOf(45).compareTo(game.effects(WORK).plun()));
@@ -115,7 +114,7 @@ class ProgressionTest {
             while (game.getDay() < 19) game.nextDay();
             assertEquals(12, game.getDailyHours());
             assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(REST).hours()));
-            assertEquals(0, java.math.BigDecimal.valueOf(-20).compareTo(game.effects(WORK).hp()));
+            assertEquals(0, java.math.BigDecimal.valueOf(-25).compareTo(game.effects(WORK).hp()));
             assertEquals(0, java.math.BigDecimal.valueOf(kind == 4 ? 57 : 39).compareTo(game.effects(WORK).plun()));
             assertEquals(0, java.math.BigDecimal.valueOf(3).compareTo(game.effects(TRAIN).workEfficiency()));
         }
@@ -158,7 +157,7 @@ class ProgressionTest {
 
     @Test
     void trainingCountsGainsAndRewardIsGrantedOnlyOnce() {
-        GameSession game = new GameSession(fixed(3));
+        GameSession game = new GameSession(fixed(3), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         // Day 14までの生活費を確保し、報酬と生活費を含む収支を検証する。
         game.changePlun(java.math.BigDecimal.valueOf(1000));
         while (game.getDay() < 9) game.nextDay();

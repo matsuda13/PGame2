@@ -15,6 +15,7 @@ import pgame2.shop.ShopCatalog.Merchant;
 import pgame2.shop.ShopPanel;
 import pgame2.train.TrainingPanel;
 import pgame2.train.TrainingAbility;
+import pgame2.work.WorkPanel;
 
 /** ステータス・行動選択・行動ログをまとめたメニュー。 */
 public class MainMenu extends JPanel {
@@ -24,6 +25,8 @@ public class MainMenu extends JPanel {
     private static final Color INK = new Color(41, 53, 65);
     /** 操作ボタンの色。 */
     private static final Color BLUE = new Color(69, 126, 163);
+    /** カーソルが乗っている即時実行コマンド。 */
+    private Action hoveredAction;
     /** 現在のゲーム状態。 */
     private GameSession session;
     /** 画面上の演出を統括する。 */
@@ -37,13 +40,13 @@ public class MainMenu extends JPanel {
     /** 日付表示。 */
     private final JLabel day = label("", 27);
     /** 所持プルン表示。 */
-    private final JLabel plun = label("", 21);
+    private final PreviewValueLabel plun = new PreviewValueLabel("プルン");
     /** 労働効率表示。 */
-    private final JLabel workEfficiency = label("", 21);
+    private final PreviewValueLabel workEfficiency = new PreviewValueLabel("労働効率");
     /** 体力表示。 */
-    private final JProgressBar hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
+    private final PreviewGauge hp = meter(GameSession.MAX_HP, new Color(224, 113, 126));
     /** 残り時間表示。 */
-    private final JProgressBar hours = meter(GameSession.DAILY_HOURS, new Color(89, 177, 209));
+    private final PreviewGauge hours = meter(GameSession.DAILY_HOURS, new Color(89, 177, 209));
     /** 行動結果と進行状況の表示。 */
     private final JLabel message = label("今日はどうしようかな…", 18);
     /** 時系列の行動ログ。 */
@@ -158,6 +161,8 @@ public class MainMenu extends JPanel {
                 BorderLayout.CENTER);
         JButton openShop = button("実行する");
         openShop.addActionListener(event -> {
+            hoveredAction = null;
+            clearActionPreview();
             int before = session.getPlun();
             ShopPanel.open(this, merchant, session);
             if (before != session.getPlun()) {
@@ -178,11 +183,47 @@ public class MainMenu extends JPanel {
         panel.add(effects, BorderLayout.CENTER);
         JButton execute = button("実行する");
         execute.addActionListener(event -> {
-            if (action == Action.TRAIN) openTraining(); else execute(action);
+            hoveredAction = null;
+            clearActionPreview();
+            if (action == Action.TRAIN) openTraining();
+            else if (action == Action.WORK) openWork();
+            else execute(action);
         });
         buttons.put(action, execute);
         panel.add(execute, BorderLayout.SOUTH);
+        if (action == Action.REST || action == Action.HEAL) installActionHover(panel, panel, action);
         return panel;
+    }
+
+    /** 子部品間の移動では消さず、カードを離れた時だけ予測を解除する。 */
+    private void installActionHover(Component component, JPanel card, Action action) {
+        component.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent event) {
+                hoveredAction = action;
+                showActionPreview(action);
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent event) {
+                Point point = SwingUtilities.convertPoint(component, event.getPoint(), card);
+                if (!card.contains(point) && hoveredAction == action) {
+                    hoveredAction = null;
+                    clearActionPreview();
+                }
+            }
+        });
+        if (component instanceof Container parent)
+            for (Component child : parent.getComponents()) installActionHover(child, card, action);
+    }
+
+    /** 即時行動の補正済み予測を、ゲーム状態を変えずに表示する。 */
+    private void showActionPreview(Action action) {
+        if (session.isGameOver() || session.getPendingBattle() != null) { clearActionPreview(); return; }
+        var preview = session.previewAction(action);
+        String reason = session.unavailableReason(action);
+        hp.showPreview(session.getHp(), preview.hpAfter(), preview.maxHpAfter(), reason);
+        hours.showPreview(session.getHours(), preview.hoursAfter(), reason);
+        plun.showPreview(session.getPlun(), preview.plunAfter(), reason);
+        workEfficiency.showPreview(session.getWorkEfficiency(), preview.workEfficiencyAfter(), reason);
+        repaint();
     }
 
     /** スクロール可能なログと進行操作を右側へ配置する。 */
@@ -243,6 +284,68 @@ public class MainMenu extends JPanel {
         }
     }
 
+    /** 結果を残して繰り返し操作できる労働画面を開く。 */
+    protected void openWork() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "労働", Dialog.ModalityType.APPLICATION_MODAL);
+        WorkPanel panel = createWorkPanel(dialog::dispose);
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent event) { panel.requestClose(); }
+        });
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setMinimumSize(dialog.getSize());
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /** 労働結果を記録し、戦闘確認後に既存の日終了・死亡判定へ接続する。 */
+    protected WorkPanel createWorkPanel(Runnable close) {
+        WorkPanel panel = new WorkPanel(() -> new WorkPanel.State(session.getDay(), session.getHours(), session.getHp(),
+                session.getMaxHp(), session.getPlun(), session.getDailyWork()), work -> {
+                    var value = session.previewWork(work);
+                    return new WorkPanel.Preview(value.hours(), value.hpCost(), value.reward(), value.battleChance());
+                }, session::workUnavailableReason, work -> {
+                    int time = 8 + session.getDailyHours() - session.getHours();
+                    var result = session.work(work);
+                    append(String.format("%02d:00  労働（%s）\nHP -%d / プルン +%d / 時間 -%d\n",
+                            time, work.name(), result.hpCost(), result.reward(), result.hours()));
+                    if (session.getPendingBattle() != null) {
+                        append(session.getBattleMessage());
+                        refresh();
+                        new BattleDialog(SwingUtilities.getWindowAncestor(this), session.getPendingBattle()).setVisible(true);
+                        session.confirmBattleResult();
+                        append(session.getBattleMessage());
+                    }
+                    String battleResult = result.battleOccurred() ? session.getBattleMessage() : "戦闘なし";
+                    actionCompleted(work.name());
+                    if (session.isGameOver()) close.run();
+                    return "<html>Day " + result.day() + "  " + work.name() + " 完了<br>獲得 " + result.reward()
+                            + " PLN / 消費 " + result.hours() + "時間 / HP損失 " + result.hpCost()
+                            + "<br>" + battleResult + "（戦闘による通常HP損失なし）</html>";
+                }, close);
+        panel.setSelectionListener(work -> {
+            if (work == null || session.isGameOver()) { clearActionPreview(); return; }
+            var preview = session.previewWork(work);
+            String reason = session.workUnavailableReason(work);
+            hp.showPreview(session.getHp(), session.getHp() - preview.hpCost(), reason);
+            hours.showPreview(session.getHours(), session.getHours() - preview.hours(), reason);
+            plun.showPreview(session.getPlun(), Math.addExact(session.getPlun(), preview.reward()), reason);
+            workEfficiency.showPreview(session.getWorkEfficiency(), session.getWorkEfficiency(), reason);
+            repaint();
+        });
+        return panel;
+    }
+
+    /** 行動の予測表示だけを解除する。 */
+    private void clearActionPreview() {
+        hp.clearPreview();
+        hours.clearPreview();
+        plun.clearPreview();
+        workEfficiency.clearPreview();
+        repaint();
+    }
+
     /** 選択画面を閉じてから既存の行動後処理へ接続する。 */
     protected void openTraining() {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "鍛錬", Dialog.ModalityType.APPLICATION_MODAL);
@@ -256,7 +359,7 @@ public class MainMenu extends JPanel {
 
     /** ダイアログとテストで共用する入力画面を作る。 */
     protected TrainingPanel createTrainingPanel(Runnable close) {
-        return new TrainingPanel(session.getHours(), session::abilityValue,
+        TrainingPanel panel = new TrainingPanel(session.getHours(), session::abilityValue,
                 (ability, duration) -> session.previewTraining(ability, duration).gain(),
                 duration -> session.getHp() - session.previewTraining(TrainingAbility.WORK_EFFICIENCY, duration).hpAfter(),
                 session::trainingUnavailableReason, (ability, duration) -> {
@@ -268,11 +371,25 @@ public class MainMenu extends JPanel {
                             result.gain(), result.before(), result.after()));
                     close.run();
                     actionCompleted("鍛錬");
-                }, close);
+                }, () -> { clearActionPreview(); close.run(); });
+        panel.setSelectionListener((ability, duration) -> {
+            if (ability == null || session.isGameOver()) { clearActionPreview(); return; }
+            var preview = session.previewTraining(ability, duration);
+            String reason = session.trainingUnavailableReason(ability, duration);
+            hp.showPreview(session.getHp(), preview.hpAfter(), reason);
+            hours.showPreview(session.getHours(), session.getHours() - duration, reason);
+            plun.showPreview(session.getPlun(), session.getPlun(), reason);
+            workEfficiency.showPreview(session.getWorkEfficiency(),
+                    ability == TrainingAbility.WORK_EFFICIENCY ? preview.after() : session.getWorkEfficiency(), reason);
+            repaint();
+        });
+        return panel;
     }
 
     /** 一日の収支を表示してから資源を引き継ぎ、翌日を始める。 */
     private void finishDay() {
+        hoveredAction = null;
+        clearActionPreview();
         String summary = "Day " + session.getDay() + " が終わりました\n\n"
                 + "HP " + startHp + " → " + session.getHp() + "\n"
                 + "プルン " + startPlun + " → " + session.getPlun() + "\n"
@@ -310,6 +427,8 @@ public class MainMenu extends JPanel {
 
     /** ゲームオーバー後に初期状態へ戻す。 */
     private void restart() {
+        hoveredAction = null;
+        clearActionPreview();
         animations.cancel();
         statusInitialized = false;
         session = new GameSession();
@@ -337,10 +456,15 @@ public class MainMenu extends JPanel {
         shownPlun = session.getPlun();
         shownWorkEfficiency = session.getWorkEfficiency();
         statusInitialized = true;
-        plun.setText("プルン   " + session.getPlun());
-        workEfficiency.setText("労働効率   " + session.getWorkEfficiency());
+        plun.showValue(session.getPlun());
+        workEfficiency.showValue(session.getWorkEfficiency());
         progress.setText("<html>" + (session.getObjectiveDescription() + "\n\n" + session.getEventDescription()).replace("\n", "<br>") + "</html>");
         buttons.forEach((action, button) -> {
+            if (action == Action.WORK) {
+                effectLabels.get(action).setText("<html><body style='width:100px'>本日の2種類から選択<br><br>時間・体力・報酬を比較して働く</body></html>");
+                button.setEnabled(!session.isGameOver() && session.getPendingBattle() == null);
+                return;
+            }
             if (action == Action.TRAIN) {
                 effectLabels.get(action).setText("<html><body style='width:100px'>5つの能力から選択<br><br>1時間から鍛錬可能<br>基本成長 +1 / 時間<br>基本HP消費 5 / 時間</body></html>");
                 String reason = session.trainingUnavailableReason(TrainingAbility.WORK_EFFICIENCY, 1);
@@ -359,11 +483,13 @@ public class MainMenu extends JPanel {
         });
         endDay.setEnabled(!session.isGameOver() && session.getPendingBattle() == null);
         restart.setVisible(session.isGameOver());
+        if (hoveredAction != null) showActionPreview(hoveredAction);
     }
 
     /** 画面を閉じた際にタイマーと古い演出を破棄する。 */
     @Override
     public void removeNotify() {
+        clearActionPreview();
         animations.cancel();
         super.removeNotify();
     }
@@ -371,6 +497,8 @@ public class MainMenu extends JPanel {
     @Override
     protected void paintChildren(Graphics graphics) {
         super.paintChildren(graphics);
+        hp.paintDelta(graphics, this);
+        hours.paintDelta(graphics, this);
         animations.texts().paint(graphics);
     }
 
@@ -413,8 +541,8 @@ public class MainMenu extends JPanel {
     }
 
     /** 資源の割合と値を表示する。 */
-    private static JProgressBar meter(int max, Color color) {
-        JProgressBar meter = new JProgressBar(0, max);
+    private static PreviewGauge meter(int max, Color color) {
+        PreviewGauge meter = new PreviewGauge(max);
         meter.setForeground(color);
         meter.setStringPainted(true);
         meter.setMaximumSize(new Dimension(220, 26));

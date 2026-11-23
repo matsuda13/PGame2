@@ -29,7 +29,7 @@ class ItemIntegrationTest {
                 return bound - 1;
             }
         };
-        GameSession game = new GameSession(random);
+        GameSession game = new GameSession(random, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.shopItems(true);
         game.changePlun(BigDecimal.valueOf(10000));
         return game;
@@ -58,7 +58,7 @@ class ItemIntegrationTest {
         advance(game, 9);
         for (int i = 0; i < 5; i++) decimal("42", game.effects(WORK).plun());
         int before = game.getPlun();
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertEquals(before + 42, game.getPlun());
     }
 
@@ -67,9 +67,9 @@ class ItemIntegrationTest {
         GameSession heat = game(0);
         heat.purchase(WORKWEAR);
         advance(heat, 9);
-        decimal("-24", heat.effects(WORK).hp());
-        heat.execute(WORK);
-        assertEquals(76, heat.getHp());
+        decimal("-30", heat.effects(WORK).hp());
+        heat.work(heat.getDailyWork().getFirst());
+        assertEquals(70, heat.getHp());
         GameSession protein = game(3);
         protein.purchase(TEXTBOOK);
         advance(protein, 9);
@@ -173,12 +173,12 @@ class ItemIntegrationTest {
             game.shouldEndDay();
         }
         int before = game.getPlun();
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertEquals(before + 30, game.getPlun());
         decimal("30.3", game.effects(WORK).plun());
         game.execute(REST);
         decimal("30.3", game.effects(WORK).plun());
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         decimal("30.6", game.effects(WORK).plun());
     }
 
@@ -221,12 +221,12 @@ class ItemIntegrationTest {
         balance(game, 499);
         game.changeHp(BigDecimal.valueOf(-50));
         decimal("45", game.effects(WORK).plun());
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertEquals(544, game.getPlun());
-        assertEquals(30, game.getHp());
-        decimal("57", game.effects(WORK).plun());
+        assertEquals(25, game.getHp());
+        decimal("58.5", game.effects(WORK).plun());
         balance(game, 500);
-        decimal("57", game.effects(WORK).plun());
+        decimal("58.5", game.effects(WORK).plun());
     }
 
     @Test
@@ -234,9 +234,11 @@ class ItemIntegrationTest {
         GameSession game = game(0, HOURGLASS);
         game.purchase(HOURGLASS);
         game.changeHours(BigDecimal.valueOf(-11));
+        assertEquals(0, game.previewAction(REST).hoursAfter());
+        assertEquals(1, game.getHours());
         assertEquals("", game.unavailableReason(WORK));
         assertFalse(game.shouldEndDay());
-        game.execute(WORK);
+        game.work(game.getDailyWork().getFirst());
         assertEquals(0, game.getHours());
         assertTrue(game.shouldEndDay());
         assertThrows(IllegalStateException.class, () -> game.execute(REST));
@@ -244,7 +246,7 @@ class ItemIntegrationTest {
         balance(game, 0);
         assertEquals("プルンが足りません", game.unavailableReason(HEAL));
         game.changeHp(BigDecimal.valueOf(-1000));
-        assertThrows(IllegalStateException.class, () -> game.execute(WORK));
+        assertThrows(IllegalStateException.class, () -> game.work(game.getDailyWork().getFirst()));
     }
 
     @Test
@@ -261,8 +263,8 @@ class ItemIntegrationTest {
         assertEquals(100, game.getHp());
         assertThrows(IllegalStateException.class, () -> game.purchase(TOOLBOX));
         assertEquals(0, game.getPlun());
-        assertFalse(new GameSession(new Random(0)).owns(TOOLBOX));
-        decimal("30", new GameSession(new Random(0)).effects(WORK).plun());
+        assertFalse(new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } }).owns(TOOLBOX));
+        decimal("30", new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } }).effects(WORK).plun());
     }
 
     @Test
@@ -287,7 +289,7 @@ class ItemIntegrationTest {
     void objectiveRewardPrecedesDayEndPayment() {
         GameSession game = new GameSession(new Random() {
             @Override public int nextInt(int bound) { return Math.min(1, bound - 1); }
-        });
+        }, new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(BigDecimal.valueOf(2000));
         advance(game, 20);
         balance(game, 150);

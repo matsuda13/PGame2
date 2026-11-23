@@ -16,6 +16,8 @@ public final class TrainingPanel extends JPanel {
     /** ゲーム内の紙・インク・差し色。 */
     private static final Color PAPER = new Color(248, 242, 225), INK = new Color(41, 53, 65),
             BLUE = new Color(69, 126, 163), MUTED = new Color(112, 111, 99), GREEN = new Color(60, 126, 91);
+    /** 親画面への選択通知。nullは解除を示す。 */
+    private BiConsumer<TrainingAbility, Integer> selectionChanged = (ability, duration) -> { };
     /** 選択中の能力。 */
     private TrainingAbility selected = TrainingAbility.WORK_EFFICIENCY;
     /** 1時間刻みの時間入力。 */
@@ -54,7 +56,7 @@ public final class TrainingPanel extends JPanel {
         close.setFont(new Font(Font.DIALOG, Font.PLAIN, 22));
         close.setForeground(MUTED); close.setContentAreaFilled(false); close.setBorderPainted(false);
         close.setToolTipText("キャンセル"); close.getAccessibleContext().setAccessibleName("キャンセル");
-        close.addActionListener(event -> cancel.run());
+        close.addActionListener(event -> { selectionChanged.accept(null, 0); cancel.run(); });
         header.add(close, BorderLayout.EAST);
         add(header, BorderLayout.NORTH);
 
@@ -141,11 +143,23 @@ public final class TrainingPanel extends JPanel {
         execute.addActionListener(event -> {
             int duration = hours.getValue();
             if (!reason.apply(selected, duration).isEmpty()) { refresh(); return; }
+            selectionChanged.accept(null, 0);
             run.accept(selected, duration);
         });
         actions.add(execute, BorderLayout.CENTER); bottom.add(actions, BorderLayout.SOUTH);
         add(bottom, BorderLayout.SOUTH);
         refresh();
+    }
+
+    /** 初期選択を含め、能力と時間の選択状態を通知する。 */
+    public void setSelectionListener(BiConsumer<TrainingAbility, Integer> listener) {
+        selectionChanged = listener;
+        selectionChanged.accept(selected, hours.getValue());
+    }
+
+    @Override public void removeNotify() {
+        selectionChanged.accept(null, 0);
+        super.removeNotify();
     }
 
     /** カードの文字や余白もクリックで選べるようにする。 */
@@ -175,6 +189,7 @@ public final class TrainingPanel extends JPanel {
         String unavailable = reason.apply(selected, duration);
         error.setText(unavailable); error.setVisible(!unavailable.isEmpty());
         execute.setEnabled(unavailable.isEmpty());
+        selectionChanged.accept(selected, duration);
     }
     /** 内容に余白を持たせつつ、参照画像に近い横幅を保つ。 */
     @Override public Dimension getPreferredSize() {

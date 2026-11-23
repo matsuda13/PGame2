@@ -39,7 +39,7 @@ public final class ItemEffectManager {
             if (effect instanceof GameEffect.WorkCompleted completed) completed.onWorkCompleted();
         }
     }
-    /** 休息完了時に反映する成長量を収集する。 */
+    /** 状態を変更せず、休息完了時に反映する回復・成長量を収集する。 */
     public Recovery restCompleted() {
         Recovery result = Recovery.NONE;
         for (ItemEffect effect : owned.values()) {

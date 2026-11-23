@@ -12,13 +12,13 @@ class ParameterChangeTest {
     @Test
     void workEfficiencyIncreasesOnlyWorkIncome() {
         for (int points : new int[] {0, 1, 5, 10}) {
-            GameSession game = new GameSession(new Random(0));
+            GameSession game = new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
             game.changeWorkEfficiency(BigDecimal.valueOf(points));
             int expected = 30 + 3 * points;
             assertEquals(0, BigDecimal.valueOf(expected).compareTo(game.effects(GameSession.Action.WORK).plun()));
             assertEquals(0, BigDecimal.ZERO.compareTo(game.effects(GameSession.Action.TRAIN).plun()));
             assertEquals(0, BigDecimal.valueOf(-15).compareTo(game.effects(GameSession.Action.HEAL).plun()));
-            game.execute(GameSession.Action.WORK);
+            game.work(game.getDailyWork().getFirst());
             assertEquals(100 + expected, game.getPlun());
         }
     }
@@ -28,14 +28,14 @@ class ParameterChangeTest {
     void efficiencyAndEventPercentagesAreAddedBeforeRounding() {
         BigDecimal income = Kind.BOOM.apply(WORK_PLUN_REWARD, 7, pgame2.common.Modifier.percent(10));
         assertEquals(0, new BigDecimal("9.1").compareTo(income));
-        GameSession game = new GameSession(new Random(0));
+        GameSession game = new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(income);
         assertEquals(109, game.getPlun());
     }
 
     @Test
     void heatKeepsFractionsUntilHpIsChanged() {
-        GameSession game = new GameSession(new Random(0));
+        GameSession game = new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         BigDecimal cost = Kind.HEAT.apply(WORK_HP_COST, 15);
         assertEquals(0, new BigDecimal("19.5").compareTo(cost));
         game.changeHp(cost.negate());
@@ -46,7 +46,7 @@ class ParameterChangeTest {
 
     @Test
     void everyResourceRoundsItsFinalValueAndOnlyHpHasBounds() {
-        GameSession game = new GameSession(new Random(0));
+        GameSession game = new GameSession(new Random(0), new java.util.Random() { @Override public int nextInt(int bound) { return 0; } });
         game.changePlun(new BigDecimal("30.9"));
         game.changePlun(new BigDecimal("-15.5"));
         assertEquals(114, game.getPlun());
