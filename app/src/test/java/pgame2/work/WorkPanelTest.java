@@ -32,11 +32,25 @@ class WorkPanelTest {
         });
         SwingUtilities.invokeAndWait(() -> {
             assertEquals(1, calls.get());
+            assertEquals("荷役の労働結果", collect(panel[0], WorkArtwork.class).get(1).getToolTipText());
             assertTrue(collect(panel[0], JToggleButton.class).getFirst().isSelected());
             collect(panel[0], JToggleButton.class).get(1).doClick();
+            assertEquals("橋作りの作業風景", collect(panel[0], WorkArtwork.class).getFirst().getToolTipText());
+            assertEquals("荷役の労働結果", collect(panel[0], WorkArtwork.class).get(1).getToolTipText());
             assertTrue(collect(panel[0], JLabel.class).stream().anyMatch(l -> l.getText().contains("荷役 完了")));
+            panel[0].setSize(panel[0].getPreferredSize());
+            layout(panel[0]);
+            BufferedImage rendered = new BufferedImage(panel[0].getWidth(), panel[0].getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D painter = rendered.createGraphics();
+            try { panel[0].printAll(painter); } finally { painter.dispose(); }
+            try {
+                java.nio.file.Files.createDirectories(java.nio.file.Path.of("build"));
+                ImageIO.write(rendered, "png", java.nio.file.Path.of("build", "work-result-preview.png").toFile());
+            } catch (java.io.IOException exception) { throw new java.io.UncheckedIOException(exception); }
             day.incrementAndGet();
             panel[0].refresh();
+            assertEquals("仕事を選択してください", collect(panel[0], WorkArtwork.class).getFirst().getToolTipText());
+            assertEquals("荷役の労働結果", collect(panel[0], WorkArtwork.class).get(1).getToolTipText());
             assertFalse(start(panel[0]).isEnabled());
             assertTrue(collect(panel[0], JToggleButton.class).stream().noneMatch(AbstractButton::isSelected));
             assertTrue(collect(panel[0], JLabel.class).stream().anyMatch(l -> l.getText().contains("荷役 完了")));
@@ -88,6 +102,24 @@ class WorkPanelTest {
         var output = java.nio.file.Path.of("build", "work-panel-preview.png");
         java.nio.file.Files.createDirectories(output.getParent());
         ImageIO.write(image[0], "png", output.toFile());
+    }
+
+    /** 全15素材のパス・透過PNGを確認し、設定ミスを見逃さない。 */
+    @Test void catalogResourcesAreReadableAndMissingResourcesFailExplicitly() throws Exception {
+        for (Work work : Work.CATALOG) {
+            for (String path : List.of(work.iconPath(), work.workingImagePath(), work.resultImagePath())) {
+                var resource = WorkPanel.class.getResource(path);
+                assertNotNull(resource, path);
+                BufferedImage image = ImageIO.read(resource);
+                assertNotNull(image, path);
+                assertTrue(image.getColorModel().hasAlpha(), path);
+            }
+        }
+        SwingUtilities.invokeAndWait(() -> {
+            assertNull(WorkArtwork.icon(""));
+            assertThrows(IllegalStateException.class, () -> WorkArtwork.icon("/pgame2/work/missing.png"));
+            for (Work work : Work.CATALOG) assertNotNull(WorkArtwork.icon(work.iconPath()));
+        });
     }
 
     /** 労働開始ボタンを取得する。 */

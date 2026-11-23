@@ -39,7 +39,9 @@ public final class WorkPanel extends JPanel {
     /** 同寸法の候補一覧。 */
     private final JPanel choices = new JPanel(new GridLayout(2, 1, 0, 12));
     /** 素材未登録時にも同じサイズを確保する。 */
-    private final JLabel illustration = new JLabel("仕事を選択してください", SwingConstants.CENTER);
+    private final WorkArtwork illustration = new WorkArtwork();
+    /** 選択変更では上書きしない、直近の労働結果の画像。 */
+    private final WorkArtwork resultPicture = new WorkArtwork();
     /** 実行と閉じる操作。 */
     private final JButton start = new JButton("労働開始"), closeButton = new JButton("閉じる");
 
@@ -65,10 +67,9 @@ public final class WorkPanel extends JPanel {
         left.add(choices, BorderLayout.CENTER);
         JPanel right = paper(new BorderLayout(12, 12));
         detail.setVerticalAlignment(SwingConstants.TOP);
-        detail.setPreferredSize(new Dimension(580, 140));
+        detail.setPreferredSize(new Dimension(580, 110));
         right.add(detail, BorderLayout.NORTH);
-        illustration.setOpaque(true);
-        illustration.setBackground(new Color(227, 237, 221));
+
         right.add(illustration, BorderLayout.CENTER);
         JPanel controls = paper(new BorderLayout(4, 6));
         controls.add(reason, BorderLayout.NORTH);
@@ -80,7 +81,6 @@ public final class WorkPanel extends JPanel {
         add(center, BorderLayout.CENTER);
         JPanel footer = paper(new BorderLayout(16, 0));
         footer.setPreferredSize(new Dimension(800, 110));
-        JLabel resultPicture = new JLabel("結果イラスト（仮）", SwingConstants.CENTER);
         resultPicture.setPreferredSize(new Dimension(160, 100));
         footer.add(resultPicture, BorderLayout.WEST);
         footer.add(result, BorderLayout.CENTER);
@@ -119,7 +119,10 @@ public final class WorkPanel extends JPanel {
         SwingUtilities.invokeLater(() -> {
             try {
                 String blocked = unavailable.apply(work);
-                if (blocked.isEmpty()) result.setText(perform.apply(work));
+                if (blocked.isEmpty()) {
+                    result.setText(perform.apply(work));
+                    resultPicture.showImage(work.resultImagePath(), work.name() + "の労働結果");
+                }
                 else result.setText(blocked);
             } finally {
                 busy = false;
@@ -137,8 +140,12 @@ public final class WorkPanel extends JPanel {
         choices.removeAll();
         for (Work work : current.candidates()) {
             Preview value = preview.apply(work);
-            JToggleButton card = new JToggleButton("<html>◇ " + work.name() + "<br><br>報酬 " + value.reward()
+            JToggleButton card = new JToggleButton("<html>" + work.name() + "<br>報酬 " + value.reward()
                     + " PLN<br>時間 " + value.hours() + "時間 / HP " + value.hpCost() + "</html>");
+            card.setIcon(WorkArtwork.icon(work.iconPath()));
+            card.setHorizontalTextPosition(SwingConstants.CENTER);
+            card.setVerticalTextPosition(SwingConstants.BOTTOM);
+            card.setIconTextGap(4);
             card.setFont(new Font(Font.DIALOG, Font.PLAIN, 17));
             card.setSelected(work.equals(selected));
             card.setEnabled(!busy);
@@ -151,21 +158,21 @@ public final class WorkPanel extends JPanel {
         reason.setText(busy ? "労働中…" : blocked.isEmpty() ? " " : blocked);
         if (selected == null) {
             detail.setText("<html>本日の労働から仕事を選択してください。<br><br><br><br><br></html>");
-            illustration.setText("仕事を選択してください");
+            illustration.showImage("", "仕事を選択してください");
         } else {
             Preview value = preview.apply(selected);
             detail.setText("<html>" + selected.name() + " — " + selected.description() + "<br><br>時間 "
                     + value.hours() + "時間 / HP " + value.hpCost() + " / 報酬 " + value.reward()
                     + " PLN<br>戦闘発生確率 " + value.chance() + "% / 戦闘危険度 " + selected.danger()
                     + "<br>" + (selected.danger() == 0 ? "危険度0：戦闘は発生しません" : "戦闘HPは通常HPとは独立しています") + "</html>");
-            illustration.setText(selected.name() + "のイラスト（仮）");
+            illustration.showImage(selected.workingImagePath(), selected.name() + "の作業風景");
         }
         selectionChanged.accept(busy || closed || current.hp() <= 0 ? null : selected);
         revalidate();
         repaint();
     }
 
-    @Override public Dimension getPreferredSize() { return new Dimension(900, 580); }
+    @Override public Dimension getPreferredSize() { return new Dimension(900, 620); }
 
     /** 紙色を透かす固定領域を作る。 */
     private static JPanel paper(LayoutManager layout) {

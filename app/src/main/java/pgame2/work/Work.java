@@ -16,10 +16,11 @@ public record Work(String id, String name, String description, int hours, int hp
             initial("mining", "採掘", "岩を砕いて鉱石を掘り出す。", 7, 50, 130, 25, 3),
             initial("gathering", "採取", "野山で暮らしに役立つ素材を集める。", 5, 40, 100, 25, 2));
 
-    /** 初期労働の素材パスは未登録とし、画面では仮表示する。 */
+    /** 承認済みの労働素材を、労働IDに対応付ける。 */
     private static Work initial(String id, String name, String description, int hours,
                                 int hpCost, int reward, int chance, int danger) {
         return new Work(id, name, description, hours, hpCost, reward, chance, danger,
-                "なし", "", "", "");
+                "なし", "/pgame2/work/" + id + "/icon.png",
+                "/pgame2/work/" + id + "/working.png", "/pgame2/work/" + id + "/result.png");
     }
 }
