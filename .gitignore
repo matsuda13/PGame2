@@ -29,5 +29,8 @@ replay_pid*
 # Ignore Gradle build output directory
 build
 
+# Ignore Java extension build output directory
+/app/bin/
+
 # Ignore Kotlin plugin data
 .kotlin
