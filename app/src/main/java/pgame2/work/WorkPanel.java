@@ -149,7 +149,12 @@ public final class WorkPanel extends JPanel {
             card.setFont(new Font(Font.DIALOG, Font.PLAIN, 17));
             card.setSelected(work.equals(selected));
             card.setEnabled(!busy);
-            card.addActionListener(event -> { selected = work; refresh(); });
+            card.addActionListener(event -> {
+                if (busy) return;
+                // 再選択は開始ボタンと同じ経路で実行条件を確認する。
+                if (work.equals(selected)) beginWork();
+                else { selected = work; refresh(); }
+            });
             choices.add(card);
         }
         String blocked = unavailable.apply(selected);

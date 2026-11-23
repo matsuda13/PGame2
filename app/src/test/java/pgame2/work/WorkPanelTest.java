@@ -11,6 +11,37 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class WorkPanelTest {
+    /** 別の仕事は選択のみ、同じ仕事の再選択は条件を確認して一度だけ実行する。 */
+    @Test void selectedCardStartsWorkAndHonorsAvailability() throws Exception {
+        AtomicInteger calls = new AtomicInteger(), blocked = new AtomicInteger(1);
+        WorkPanel[] panel = new WorkPanel[1];
+        SwingUtilities.invokeAndWait(() -> {
+            panel[0] = new WorkPanel(() -> new WorkPanel.State(1, 12, 100, 100, 100, Work.CATALOG.subList(0, 2)),
+                    work -> new WorkPanel.Preview(work.hours(), work.hpCost(), work.plunReward(), work.battleChance()),
+                    work -> work == null ? "選択してください" : blocked.get() == 1 ? "時間が足りません" : "",
+                    work -> { assertEquals(Work.CATALOG.get(1), work); calls.incrementAndGet(); return "完了"; }, () -> { });
+            collect(panel[0], JToggleButton.class).getFirst().doClick();
+            collect(panel[0], JToggleButton.class).getFirst().doClick();
+            assertTrue(collect(panel[0], JToggleButton.class).getFirst().isSelected());
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            assertEquals(0, calls.get());
+            blocked.set(0);
+            collect(panel[0], JToggleButton.class).get(1).doClick();
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            assertEquals(0, calls.get());
+            collect(panel[0], JToggleButton.class).get(1).doClick();
+            collect(panel[0], JToggleButton.class).get(1).doClick();
+            start(panel[0]).doClick();
+            assertTrue(collect(panel[0], JToggleButton.class).stream().noneMatch(Component::isEnabled));
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            assertEquals(1, calls.get());
+            assertTrue(collect(panel[0], JToggleButton.class).get(1).isSelected());
+        });
+    }
+
     /** 選択だけでは実行せず、処理中の連打と閉じる操作を拒否する。 */
     @Test void selectionExecutionAndResultPersistence() throws Exception {
         AtomicInteger calls = new AtomicInteger(), closed = new AtomicInteger(), day = new AtomicInteger(1);
